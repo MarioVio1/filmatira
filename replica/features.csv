@@ -1,0 +1,28 @@
+id,area,feature,original,clone
+C01,Fotocamera,Preview con filtro live in tempo reale,sì,sì
+C02,Fotocamera,Scatto foto a piena risoluzione con LUT applicato,sì,sì
+C03,Fotocamera,Registrazione video con grading live + audio,sì,sì
+C04,Fotocamera,Slider intensità filtro,sì,sì
+C05,Fotocamera,Torcia / flash / flip / zoom / tap-focus,sì,sì
+C06,Fotocamera,Griglia dei terzi,sì,sì
+E01,Editor,12 preset in 4 pack cinematografici (LUT originali 33³),sì,sì
+E02,Editor,Intensità per preset,sì,sì
+E03,Editor,Grain pellicola regolabile,sì,sì
+E04,Editor,Vignetta regolabile,sì,sì
+E05,Editor,Confronto prima/dopo (pressione),sì,sì
+E06,Editor,Salva in Foto + condivisione,sì,sì
+F01,Volto,Pelle liscia (maschera landmark),sì,sì
+F02,Volto,Occhi più luminosi,sì,sì
+F03,Volto,Denti più bianchi,sì,sì
+F04,Volto,Pomelli scolpiti (warp),sì,sì
+F05,Volto,Mandibola definita (warp),sì,sì
+F06,Volto,Labbra più vive (vibrance),sì,sì
+F07,Volto,Luce ritratto,sì,sì
+F08,Volto,Sfondo sfocato stile ritratto,sì,sì
+F09,Volto,Look epoca sul volto (Anni '70 / Anni '90),sì,sì
+F10,Volto,Multi-volto: edit automatico su tutti i volti + selezione target,sì,sì
+S01,Studio,Griglia media con miniature,sì,sì
+S02,Studio,Import da Fotolibra (PhotosPicker),sì,sì
+S03,Studio,Condividi / elimina,sì,sì
+S04,Studio,Riproduzione video con player,sì,sì
+P01,Privacy,Tutto on-device, nessuna rete,sì,sì

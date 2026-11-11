@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Xcode (progetto generato da XcodeGen, non va committato)
+Filmatura.xcodeproj/
+build/
+DerivedData/
+*.xcuserdatad/
+xcuserdata/
+
+# Build intermedi
+*.ipa
+Payload/

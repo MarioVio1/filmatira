@@ -1,0 +1,63 @@
+name: Filmatura
+options:
+  bundleIdPrefix: it.filmatura
+  deploymentTarget:
+    iOS: "16.4"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: 1
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  Filmatura:
+    type: application
+    platform: iOS
+    sources:
+      - Filmatura
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.filmatura.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: Filmatura/Info.plist
+      properties:
+        CFBundleDisplayName: Filmatura
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: "Filmatura usa la fotocamera per scattare foto e registrare video con i look cinematografici."
+        NSMicrophoneUsageDescription: "Filmatura usa il microfono per registrare l'audio dei tuoi video."
+        NSPhotoLibraryAddUsageDescription: "Filmatura salva le tue foto e i tuoi video in Fotolibra quando lo chiedi."
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+
+  FilmaturaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: Filmatura
+
+schemes:
+  Filmatura:
+    build:
+      targets:
+        Filmatura: all
+        FilmaturaTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - FilmaturaTests
