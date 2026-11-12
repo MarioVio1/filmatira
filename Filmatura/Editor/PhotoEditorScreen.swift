@@ -112,7 +112,7 @@ struct PhotoEditorScreen: View {
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Theme.textSecondary)
                         .frame(width: 68, height: 64)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     ForEach(pack.presets) { item in
                         Button {
@@ -164,7 +164,7 @@ struct PhotoEditorScreen: View {
             controlRow(title: "Vignetta", value: $vignette)
         }
         .padding(16)
-        .background(Theme.surface)
+        .background(.ultraThinMaterial)
     }
 
     @ViewBuilder

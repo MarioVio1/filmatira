@@ -123,7 +123,7 @@ struct FaceEditScreen: View {
         ScrollView {
             VStack(spacing: 16) {
                 faceTargets
-                beautyRow
+                presetRow
                 eraChips
                 toolSliders
                 makeupSection
@@ -131,8 +131,8 @@ struct FaceEditScreen: View {
             }
             .padding(16)
         }
-        .frame(height: 300)
-        .background(Theme.surface)
+        .frame(height: 340)
+        .background(.ultraThinMaterial)
     }
 
     private var faceTargets: some View {
@@ -164,19 +164,38 @@ struct FaceEditScreen: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var beautyRow: some View {
+    /// Tre preset istantanei: Fai bello, Naturale, Glam.
+    private var presetRow: some View {
+        HStack(spacing: 8) {
+            presetButton("Fai bello", icon: "wand.and.stars",
+                         preset: FaceEditControls.beautyPreset(),
+                         isSelected: controls.isBeautyPreset)
+            presetButton("Naturale", icon: "leaf.fill",
+                         preset: FaceEditControls.naturalePreset(),
+                         isSelected: controls.isNaturalePreset)
+            presetButton("Glam", icon: "sparkles",
+                         preset: FaceEditControls.glamPreset(),
+                         isSelected: controls.isGlamPreset)
+        }
+    }
+
+    private func presetButton(_ title: String,
+                              icon: String,
+                              preset: FaceEditControls,
+                              isSelected: Bool) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
-                controls = controls.isBeautyPreset ? FaceEditControls() : FaceEditControls.beautyPreset()
+                controls = isSelected ? FaceEditControls() : preset
             }
             scheduleRender()
         } label: {
-            Label("Fai bello", systemImage: "wand.and.stars")
-                .font(Theme.heading)
+            Label(title, systemImage: icon)
+                .font(Theme.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(controls.isBeautyPreset ? Theme.accent : Theme.surfaceElevated, in: Capsule())
-                .foregroundStyle(controls.isBeautyPreset ? Color.white : Theme.text)
+                .glassButton(isSelected: isSelected)
         }
     }
 
@@ -205,10 +224,14 @@ struct FaceEditScreen: View {
     private var toolSliders: some View {
         VStack(spacing: 14) {
             sliderRow("Pelle liscia", $controls.skinSmooth)
+            sliderRow("Occhiaie", $controls.underEye)
             sliderRow("Occhi", $controls.eyeBrightness)
+            sliderRow("Occhi grandi", $controls.eyeEnlarge)
             sliderRow("Denti", $controls.teethWhitening)
+            sliderRow("Glow viso", $controls.skinGlow)
             sliderRow("Pomelli", $controls.cheekSculpt)
             sliderRow("Mandibola", $controls.jawSculpt)
+            sliderRow("Viso snello", $controls.faceSlim)
             sliderRow("Labbra", $controls.lipVibrance)
             sliderRow("Luce ritratto", $controls.portraitLight)
             sliderRow("Sfondo sfocato", $controls.backgroundBlur)
@@ -280,7 +303,7 @@ struct FaceEditScreen: View {
                                 .frame(width: 24, height: 24)
                                 .overlay(
                                     Circle().strokeBorder(
-                                        shade.wrappedValue == s ? Theme.accent : Color.white.opacity(0.3),
+                                        shade.wrappedValue == s ? Theme.accent : Theme.textSecondary.opacity(0.4),
                                         lineWidth: shade.wrappedValue == s ? 2 : 1)
                                 )
                         }
@@ -301,10 +324,9 @@ struct FaceEditScreen: View {
             scheduleRender()
         }
         .font(Theme.caption)
-        .foregroundStyle(Theme.textSecondary)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .background(Theme.surfaceElevated, in: Capsule())
+        .glassButton(isSelected: false)
     }
 
     // MARK: - Caricamento e rendering

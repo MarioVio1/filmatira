@@ -27,7 +27,7 @@ struct FilmaturaApp: App {
                 .environmentObject(appState)
                 .environmentObject(camera)
                 .environmentObject(studio)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }

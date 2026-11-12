@@ -59,11 +59,15 @@ enum MakeupShade: String, CaseIterable, Equatable, Identifiable {
 /// Strumenti di editing volto, tutti originali (Vision + CoreImage).
 struct FaceEditControls: Equatable {
     var skinSmooth: Double = 0        // pelle liscia
+    var underEye: Double = 0          // occhiaie attenuate
     var eyeBrightness: Double = 0     // occhi piu' luminosi
+    var eyeEnlarge: Double = 0        // occhi piu' grandi (warp locale)
     var teethWhitening: Double = 0    // denti piu' bianchi
     var cheekSculpt: Double = 0       // pomelli scolpiti (pinch)
     var jawSculpt: Double = 0         // mandibola definita (pinch)
+    var faceSlim: Double = 0          // viso snello (pinch laterale)
     var lipVibrance: Double = 0       // labbra piu' vive
+    var skinGlow: Double = 0          // glow viso
     var portraitLight: Double = 0     // luce ritratto
     var backgroundBlur: Double = 0    // sfondo sfocato
 
@@ -84,22 +88,27 @@ struct FaceEditControls: Equatable {
     var targetFaceID: UUID? = nil     // nil = tutti i volti
 
     var isNeutral: Bool {
-        skinSmooth == 0 && eyeBrightness == 0 && teethWhitening == 0 &&
-        cheekSculpt == 0 && jawSculpt == 0 && lipVibrance == 0 &&
-        portraitLight == 0 && backgroundBlur == 0 && eraLook == .none &&
-        foundation == 0 && contour == 0 && blush == 0 && eyeshadow == 0 &&
-        eyeliner == 0 && lipstick == 0
+        skinSmooth == 0 && underEye == 0 && eyeBrightness == 0 &&
+        eyeEnlarge == 0 && teethWhitening == 0 && cheekSculpt == 0 &&
+        jawSculpt == 0 && faceSlim == 0 && lipVibrance == 0 &&
+        skinGlow == 0 && portraitLight == 0 && backgroundBlur == 0 &&
+        eraLook == .none && foundation == 0 && contour == 0 && blush == 0 &&
+        eyeshadow == 0 && eyeliner == 0 && lipstick == 0
     }
 
     /// Preset «Fai bello»: ritocco completo + trucco leggero.
     static func beautyPreset() -> FaceEditControls {
         var c = FaceEditControls()
         c.skinSmooth = 0.55
+        c.underEye = 0.40
         c.eyeBrightness = 0.45
+        c.eyeEnlarge = 0.15
         c.teethWhitening = 0.50
         c.cheekSculpt = 0.25
         c.jawSculpt = 0.20
+        c.faceSlim = 0.18
         c.lipVibrance = 0.35
+        c.skinGlow = 0.30
         c.portraitLight = 0.50
         c.backgroundBlur = 0.35
         c.foundation = 0.40
@@ -111,7 +120,48 @@ struct FaceEditControls: Equatable {
         return c
     }
 
+    /// Preset «Naturale»: solo lucido, nessun warp e nessun trucco.
+    static func naturalePreset() -> FaceEditControls {
+        var c = FaceEditControls()
+        c.skinSmooth = 0.35
+        c.underEye = 0.40
+        c.eyeBrightness = 0.20
+        c.teethWhitening = 0.30
+        c.skinGlow = 0.25
+        c.portraitLight = 0.25
+        return c
+    }
+
+    /// Preset «Glam»: ritocco forte, occhi grandi, trucco serata.
+    static func glamPreset() -> FaceEditControls {
+        var c = FaceEditControls()
+        c.skinSmooth = 0.60
+        c.underEye = 0.45
+        c.eyeBrightness = 0.50
+        c.eyeEnlarge = 0.20
+        c.faceSlim = 0.22
+        c.teethWhitening = 0.55
+        c.cheekSculpt = 0.25
+        c.lipVibrance = 0.40
+        c.skinGlow = 0.35
+        c.portraitLight = 0.55
+        c.backgroundBlur = 0.30
+        c.foundation = 0.45
+        c.foundationShade = .caldo
+        c.contour = 0.30
+        c.blush = 0.40
+        c.blushShade = .rosa
+        c.eyeshadow = 0.45
+        c.eyeshadowShade = .malva
+        c.eyeliner = 0.50
+        c.lipstick = 0.50
+        c.lipstickShade = .rosso
+        return c
+    }
+
     var isBeautyPreset: Bool { self == FaceEditControls.beautyPreset() }
+    var isNaturalePreset: Bool { self == FaceEditControls.naturalePreset() }
+    var isGlamPreset: Bool { self == FaceEditControls.glamPreset() }
 }
 
 /// Look epoca applicati via LUT + grain della libreria Filmatura.
@@ -173,11 +223,32 @@ enum FaceRenderer {
             result = blend(base: result, top: whitened, mask: mask)
         }
 
+        // 3b. Occhiaie attenuate (area sotto gli occhi)
+        if controls.underEye > 0 {
+            let mask = underEyeMask(for: selected, size: image.extent.size, feather: 6)
+            let corrected = colorAdjust(result,
+                                        brightness: 0.09 * controls.underEye,
+                                        saturation: 1.0 - 0.25 * controls.underEye,
+                                        contrast: 1.02)
+            result = blend(base: result, top: corrected, mask: mask)
+        }
+
         // 4. Labbra piu' vive
         if controls.lipVibrance > 0 {
             let mask = lipsMask(for: selected, size: image.extent.size, feather: 4)
             let vibrant = vibrance(result, amount: 0.4 * controls.lipVibrance)
             result = blend(base: result, top: vibrant, mask: mask)
+        }
+
+        // 4a. Glow viso: luce calda su tutto il volto
+        if controls.skinGlow > 0 {
+            let mask = faceMask(for: selected, size: image.extent.size,
+                                feather: max(10, image.extent.width * 0.008))
+            let warmed = colorAdjust(result,
+                                     brightness: 0.045 * controls.skinGlow,
+                                     saturation: 1.0 + 0.10 * controls.skinGlow,
+                                     contrast: 1.01)
+            result = blend(base: result, top: warmed, mask: mask)
         }
 
         // 4b. Trucco (cipria, contouring, blush, ombretto, eyeliner, rossetto)
@@ -197,7 +268,17 @@ enum FaceRenderer {
             result = blend(base: result, top: blurred, mask: mask)
         }
 
-        // 7. Warp geometrico: pomelli e mandibola (al termine, per allineare)
+        // 7. Warp geometrico: occhi grandi, pomelli, mandibola, viso snello
+        // (al termine, per allineare)
+        if controls.eyeEnlarge > 0 {
+            for face in selected {
+                for eye in [face.leftEye, face.rightEye] {
+                    result = bump(result, center: eye,
+                                  radius: face.eyeWidth * 1.25,
+                                  scale: 0.30 * controls.eyeEnlarge)
+                }
+            }
+        }
         if controls.cheekSculpt > 0 {
             for face in selected {
                 result = pinch(result, center: face.cheekPointLeft,
@@ -216,6 +297,20 @@ enum FaceRenderer {
                 result = pinch(result, center: face.jawPointRight,
                                radius: face.faceWidth * 0.24,
                                scale: 0.45 * controls.jawSculpt)
+            }
+        }
+        if controls.faceSlim > 0 {
+            for face in selected {
+                let left = CGPoint(x: face.box.minX + face.faceWidth * 0.18,
+                                   y: face.box.minY + face.faceHeight * 0.55)
+                let right = CGPoint(x: face.box.maxX - face.faceWidth * 0.18,
+                                    y: face.box.minY + face.faceHeight * 0.55)
+                result = pinch(result, center: left,
+                               radius: face.faceWidth * 0.26,
+                               scale: 0.50 * controls.faceSlim)
+                result = pinch(result, center: right,
+                               radius: face.faceWidth * 0.26,
+                               scale: 0.50 * controls.faceSlim)
             }
         }
 
@@ -266,6 +361,21 @@ enum FaceRenderer {
                               scale: CGFloat) -> CIImage {
         guard scale > 0.01, radius > 2 else { return image }
         let filter = CIFilter(name: "CIPinchDistortion")
+        filter?.setValue(image, forKey: kCIInputImageKey)
+        filter?.setValue(CIVector(x: center.x, y: center.y), forKey: kCIInputCenterKey)
+        filter?.setValue(radius, forKey: kCIInputRadiusKey)
+        filter?.setValue(scale, forKey: kCIInputScaleKey)
+        return filter?.outputImage?.cropped(to: image.extent) ?? image
+    }
+
+    /// Rigonfiamento locale (CIBumpDistortion): ingrandisce occhi e dettagli
+    /// senza deformare il resto dell'immagine.
+    private static func bump(_ image: CIImage,
+                             center: CGPoint,
+                             radius: CGFloat,
+                             scale: CGFloat) -> CIImage {
+        guard scale > 0.01, radius > 2 else { return image }
+        let filter = CIFilter(name: "CIBumpDistortion")
         filter?.setValue(image, forKey: kCIInputImageKey)
         filter?.setValue(CIVector(x: center.x, y: center.y), forKey: kCIInputCenterKey)
         filter?.setValue(radius, forKey: kCIInputRadiusKey)
@@ -373,6 +483,27 @@ enum FaceRenderer {
                                       width: radius * 2,
                                       height: radius * 1.4)
                     context.fillEllipse(in: rect)
+                }
+            }
+        }
+        return feathered(mask, radius: feather)
+    }
+
+    /// Maschera occhiaie: ellissi morbide sotto i due occhi.
+    private static func underEyeMask(for faces: [FaceData],
+                                     size: CGSize,
+                                     feather: CGFloat) -> CIImage {
+        let mask = maskImage(size: size) { context in
+            context.setFillColor(gray: 1, alpha: 1)
+            for face in faces {
+                for center in [face.leftEye, face.rightEye] {
+                    let rx = face.eyeWidth * 0.85
+                    let ry = face.eyeWidth * 0.55
+                    let cy = center.y + face.eyeWidth * 0.75
+                    context.fillEllipse(in: CGRect(x: center.x - rx,
+                                                   y: cy - ry,
+                                                   width: rx * 2,
+                                                   height: ry * 2))
                 }
             }
         }

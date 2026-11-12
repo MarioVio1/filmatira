@@ -356,7 +356,7 @@ struct ToolButton: View {
             }
             .foregroundStyle(Theme.text)
             .frame(width: 52, height: 46)
-            .background(Theme.surface.opacity(0.72), in: RoundedRectangle(cornerRadius: 12))
+            .background(Theme.background.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }

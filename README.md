@@ -22,15 +22,21 @@ grafica completamente originali, nessun asset o brand di terzi.
   - *Horror & Thriller*: Nebbia, Crimson, Nord
 - **Editor foto** — pack, intensità, grain pellicola, vignetta, confronto
   prima/dopo, salvataggio in app e in Fotolibra.
-- **Volto (ritratti)** — rilevamento landmark con Vision: pelle liscia, occhi
-  più luminosi, denti più bianchi, pomelli e mandibola scolpiti (warp),
-  labbra più vive, luce ritratto, sfondo sfocato, **trucco** (cipria,
-  contouring, blush, ombretto, eyeliner e rossetto con sfumature
-  selezionabili), tasto **«Fai bello»** (preset automatico completo di
-  ritocco + trucco leggero), look epoca *Anni '70 / Anni '90*,
-  **multi-volto** (tutti i volti o selezione singola), confronto, export.
+- **Volto (ritratti)** — rilevamento landmark con Vision: pelle liscia,
+  **occhiaie attenuate**, occhi più luminosi, **occhi più grandi** (warp
+  locale), denti più bianchi, **glow viso**, pomelli e mandibola scolpiti
+  (warp), **viso snello**, labbra più vive, luce ritratto, sfondo sfocato,
+  **trucco** (cipria, contouring, blush, ombretto, eyeliner e rossetto con
+  sfumature selezionabili), **tre preset istantanei** — «Fai bello»
+  (ritocco completo + trucco leggero), «Naturale» (solo lucido) e «Glam»
+  (ritocco forte, occhi grandi, trucco serata) — look epoca *Anni '70 /
+  Anni '90*, **multi-volto** (tutti i volti o selezione singola), confronto,
+  export.
 - **Studio** — galleria dei media dell'app, import da Fotolibra, player
   video, condivisione ed eliminazione.
+- **Grafica «Liquid Glass»** — palette chiara in stile Apple: superfici
+  translucide (materiali SwiftUI), bordi luminosi, angoli generosi, ombre
+  soffuse; la fotocamera resta su cromie scure per la preview.
 
 ## Privacy
 
@@ -135,9 +141,13 @@ Poi aggiorna il catalogo in `Filmatura/LUT/LUTPreset.swift`.
 - **Video**: i buffer di cattura vengono elaborati dal grading e scritti con
   `AVAssetWriter` (H.264 1080×1920 ~9 Mbps + AAC). Se il microfono non è
   autorizzato, il video parte senza audio.
-- **Volto**: le maschere (pelle, denti, labbra) sono poligoni disegnati dai
-  landmark e sfumati; pomelli/mandibola usano `CIPinchDistortion`; il warp è
+- **Volto**: le maschere (pelle, occhiaie, denti, labbra) sono poligoni
+  disegnati dai landmark e sfumati; pomelli/mandibola/viso snello usano
+  `CIPinchDistortion`, gli occhi più grandi `CIBumpDistortion`; il warp è
   applicato a valle dei correttori colore.
+- **UI «Liquid Glass»**: su iOS 16.4 le superfici in vetro sono ottenute con
+  i materiali SwiftUI (`.ultraThinMaterial`) più bordi luminosi e ombre —
+  nessuna API privata, compatibile con le release future di iOS.
 - **iOS**: target 16.4+, solo iPhone verticale.
 
 ## Licenza d'uso del progetto

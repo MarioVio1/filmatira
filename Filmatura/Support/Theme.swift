@@ -1,17 +1,20 @@
 import SwiftUI
 
-/// Token di design di Filmatura — nessun valore grezzo nelle viste.
+/// Token di design di Filmatura — stile «Liquid Glass»: palette chiara,
+/// superfici translucide, bordi luminosi, angoli generosi e ombre soffuse.
 enum Theme {
-    static let background = Color(red: 0.066, green: 0.075, blue: 0.094)
-    static let surface = Color(red: 0.106, green: 0.113, blue: 0.137)
-    static let surfaceElevated = Color(red: 0.145, green: 0.153, blue: 0.180)
-    static let text = Color(red: 0.949, green: 0.953, blue: 0.965)
-    static let textSecondary = Color(red: 0.604, green: 0.627, blue: 0.667)
-    static let accent = Color(red: 0.914, green: 0.506, blue: 0.188)
-    static let accentTeal = Color(red: 0.055, green: 0.455, blue: 0.529)
-    static let recording = Color(red: 0.867, green: 0.239, blue: 0.235)
+    // Palette chiara
+    static let background = Color(red: 0.945, green: 0.953, blue: 0.969)
+    static let backgroundDeep = Color(red: 0.898, green: 0.910, blue: 0.937)
+    static let surface = Color.white.opacity(0.62)
+    static let surfaceElevated = Color.white.opacity(0.85)
+    static let text = Color(red: 0.118, green: 0.125, blue: 0.149)
+    static let textSecondary = Color(red: 0.42, green: 0.44, blue: 0.49)
+    static let accent = Color(red: 0.925, green: 0.475, blue: 0.161)
+    static let accentTeal = Color(red: 0.075, green: 0.478, blue: 0.549)
+    static let recording = Color(red: 0.898, green: 0.235, blue: 0.235)
 
-    static let cornerRadius: CGFloat = 14
+    static let cornerRadius: CGFloat = 20
     static let chipHeight: CGFloat = 64
 
     /// Titoli di sezione (Studio, Volto…).
@@ -23,21 +26,56 @@ enum Theme {
 
 /// Estensioni comuni di stile.
 extension View {
+
+    /// Scheda «Liquid Glass»: materiale translucido, bordo luminoso interno
+    /// e ombra morbida.
     func filmaturaCard() -> some View {
         self
             .padding(16)
-            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cornerRadius))
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                    .strokeBorder(.white.opacity(0.55), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 6)
     }
 
+    /// Chip translucida: vetro quando non selezionata, gradiente d'accento
+    /// con riflesso quando selezionata.
     func chipStyle(isSelected: Bool) -> some View {
         self
             .font(Theme.caption)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(
-                isSelected ? Theme.accent : Theme.surfaceElevated,
+                isSelected
+                    ? AnyShapeStyle(
+                        LinearGradient(colors: [Theme.accent, Theme.accent.opacity(0.82)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing))
+                    : AnyShapeStyle(.ultraThinMaterial),
                 in: Capsule()
             )
-            .foregroundStyle(isSelected ? .white : Theme.text)
+            .overlay(Capsule().strokeBorder(.white.opacity(0.45), lineWidth: 1))
+            .foregroundStyle(isSelected ? Color.white : Theme.text)
+            .shadow(color: .black.opacity(isSelected ? 0.16 : 0.05), radius: 5, x: 0, y: 2)
+    }
+
+    /// Bottone pilastro «Liquid Glass» (presets, azioni principali).
+    func glassButton(isSelected: Bool) -> some View {
+        self
+            .background(
+                isSelected
+                    ? AnyShapeStyle(
+                        LinearGradient(colors: [Theme.accent, Theme.accent.opacity(0.82)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing))
+                    : AnyShapeStyle(.ultraThinMaterial),
+                in: Capsule()
+            )
+            .overlay(Capsule().strokeBorder(.white.opacity(0.5), lineWidth: 1))
+            .foregroundStyle(isSelected ? Color.white : Theme.text)
+            .shadow(color: .black.opacity(isSelected ? 0.16 : 0.06), radius: 6, x: 0, y: 3)
     }
 }
