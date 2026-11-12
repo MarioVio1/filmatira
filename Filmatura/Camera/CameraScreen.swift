@@ -160,10 +160,13 @@ struct CameraScreen: View {
                         .frame(width: 40, height: 28)
                         .background(
                             abs(camera.zoomFactor - factor) < 0.05
-                                ? Theme.accent : Theme.surfaceElevated,
+                                ? AnyShapeStyle(Theme.accent)
+                                : AnyShapeStyle(.ultraThinMaterial),
                             in: Capsule()
                         )
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.4), lineWidth: 1))
                         .foregroundStyle(abs(camera.zoomFactor - factor) < 0.05 ? .white : Theme.text)
+                        .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
                 }
             }
             Spacer()
@@ -254,6 +257,7 @@ struct CameraScreen: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Theme.text)
                     .frame(width: 56, height: 56)
+                    .glassOrb()
             }
 
             Spacer()
@@ -271,6 +275,7 @@ struct CameraScreen: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Theme.text)
                     .frame(width: 56, height: 56)
+                    .glassOrb()
             }
         }
         .padding(.top, 6)
@@ -340,7 +345,8 @@ struct ShutterButton: View {
     }
 }
 
-/// Icona con etichetta della barra superiore.
+/// Icona con etichetta della barra superiore (piastrella di vetro Liquid
+/// Glass sopra la preview della fotocamera).
 struct ToolButton: View {
     let icon: String
     let label: String
@@ -356,8 +362,17 @@ struct ToolButton: View {
             }
             .foregroundStyle(Theme.text)
             .frame(width: 52, height: 46)
-            .background(Theme.background.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(
+                .thinMaterial,
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(.white.opacity(0.4), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.12), radius: 5, y: 2)
         }
+        .buttonStyle(.plain)
     }
 }
 

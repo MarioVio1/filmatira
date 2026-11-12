@@ -299,12 +299,19 @@ enum FaceRenderer {
     static func render(image: CIImage,
                        faces: [FaceData],
                        controls: FaceEditControls,
+                       healPoints: [CGPoint] = [],
                        store: LUTStore = .shared) -> CIImage {
         var result = image
         let selected = faces.filter {
             controls.targetFaceID == nil || $0.id == controls.targetFaceID
         }
         let size = image.extent.size
+
+        // 0. Rimozione a tocco (AirBrush «Rimuovi»): ogni punto toccato
+        //    viene sostituito con la pelle mediana locale.
+        if !healPoints.isEmpty {
+            result = applyHeal(result, points: healPoints)
+        }
 
         // 1. Pelle stile AirBrush: macchie mirate, levigatura a separazione
         //    di frequenze, tono uniforme, luce viso, abbronzatura e glow.
@@ -408,6 +415,28 @@ enum FaceRenderer {
     }
 
     // MARK: - Pelle
+
+    /// Rimozione a tocco (pennello «Rimuovi» di AirBrush): dentro cerchi
+    /// soffusi centrati sui punti toccati sostituisce i pixel con la
+    /// mediana locale (la pelle circostante), che elimina brufoli, nei e
+    /// piccole macchie senza toccare il resto. I punti sono normalizzati
+    /// (0-1) rispetto all'immagine, cosi' non dipendono dalla risoluzione.
+    private static func applyHeal(_ image: CIImage,
+                                  points: [CGPoint]) -> CIImage {
+        let size = image.extent.size
+        let radius = max(10.0, min(size.width, size.height) * 0.024)
+        let med = median(median(image))
+        let mask = maskImage(size: size) { context in
+            context.setFillColor(gray: 1, alpha: 1)
+            for point in points {
+                let p = CGPoint(x: point.x * size.width, y: point.y * size.height)
+                context.fillEllipse(in: CGRect(x: p.x - radius, y: p.y - radius,
+                                               width: radius * 2, height: radius * 2))
+            }
+        }
+        return blend(base: image, top: med,
+                     mask: feathered(mask, radius: radius * 0.5))
+    }
 
     /// Anti-macchie mirato (stile AirBrush): individua solo i pixel che
     /// divergono dalla mediana locale (brufoli, pori, piccole macchie) e

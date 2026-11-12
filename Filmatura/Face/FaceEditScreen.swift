@@ -20,6 +20,8 @@ struct FaceEditScreen: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var saveResult: String?
     @State private var renderTask: Task<Void, Never>?
+    @State private var healMode = false
+    @State private var healPoints: [CGPoint] = []
 
     var body: some View {
         NavigationStack {
@@ -119,33 +121,56 @@ struct FaceEditScreen: View {
     // MARK: - Immagine
 
     private func imageArea(for image: UIImage) -> some View {
-        ZStack {
-            Image(uiImage: showingOriginal ? image : (preview ?? image))
-                .resizable()
-                .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-                .padding(.horizontal, 10)
+        GeometryReader { geo in
+            ZStack {
+                Image(uiImage: showingOriginal ? image : (preview ?? image))
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                    .padding(.horizontal, 10)
 
-            if isDetecting || isProcessing {
-                ProgressView()
-                    .tint(Theme.text)
+                if isDetecting || isProcessing {
+                    ProgressView()
+                        .tint(Theme.text)
+                }
             }
-        }
-        .frame(maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in showingOriginal = true }
-                .onEnded { _ in showingOriginal = false }
-        )
-        .overlay(alignment: .bottom) {
-            if showingOriginal {
-                Text("Originale")
-                    .font(Theme.caption)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.black.opacity(0.6), in: Capsule())
-                    .padding(.bottom, 10)
+            .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !healMode { showingOriginal = true }
+                    }
+                    .onEnded { value in
+                        showingOriginal = false
+                        // In modalità rimozione un tap netto aggiunge
+                        // un punto di guarigione (spostamento minimo).
+                        let moved = hypot(value.translation.width,
+                                          value.translation.height)
+                        if healMode, moved < 10 {
+                            addHealPoint(at: value.startLocation,
+                                         container: geo.size)
+                        }
+                    }
+            )
+            .overlay(alignment: .bottom) {
+                if showingOriginal {
+                    Text("Originale")
+                        .font(Theme.caption)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.6), in: Capsule())
+                        .padding(.bottom, 10)
+                } else if healMode {
+                    Text(healPoints.isEmpty
+                         ? "Tocca le imperfezioni da rimuovere"
+                         : "\(healPoints.count) tocchi — tocca per aggiungerne altri")
+                        .font(Theme.caption)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.6), in: Capsule())
+                        .padding(.bottom, 10)
+                }
             }
         }
     }
@@ -257,6 +282,10 @@ struct FaceEditScreen: View {
         switch category {
         case .pelle:
             VStack(spacing: 12) {
+                healToggleRow
+                if !healPoints.isEmpty {
+                    healUndoRow
+                }
                 sliderRow("Leviga", $controls.skinSmooth)
                 sliderRow("Macchie", $controls.blemish)
                 sliderRow("Illumina", $controls.skinBrighten)
@@ -327,6 +356,70 @@ struct FaceEditScreen: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Rimozione a tocco (pennello AirBrush «Rimuovi»)
+
+    private var healToggleRow: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) { healMode.toggle() }
+        } label: {
+            Label(healMode ? "Rimozione a tocco attiva" : "Rimozione a tocco",
+                  systemImage: healMode ? "checkmark.circle.fill" : "wand.and.rays")
+                .font(Theme.caption.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .glassButton(isSelected: healMode)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Attiva o disattiva la rimozione a tocco")
+    }
+
+    private var healUndoRow: some View {
+        HStack(spacing: 10) {
+            Button("Annulla ultimo") {
+                if !healPoints.isEmpty {
+                    healPoints.removeLast()
+                    scheduleRender()
+                }
+            }
+            .font(Theme.caption)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .glassButton(isSelected: false)
+
+            Button("Azzera tocchi") {
+                healPoints.removeAll()
+                scheduleRender()
+            }
+            .font(Theme.caption)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .glassButton(isSelected: false)
+
+            Spacer()
+        }
+    }
+
+    /// Converte il punto toccato (coordinate schermo del contenitore) in
+    /// coordinate immagine normalizzate 0-1, affinché il renderer le
+    /// mappi su qualsiasi risoluzione.
+    private func addHealPoint(at location: CGPoint, container: CGSize) {
+        guard let sourceImage else { return }
+        let inner = CGSize(width: max(1, container.width - 20),
+                           height: max(1, container.height))
+        let imgSize = sourceImage.size
+        guard imgSize.width > 0, imgSize.height > 0 else { return }
+        let scale = min(inner.width / imgSize.width, inner.height / imgSize.height)
+        let displayW = imgSize.width * scale
+        let displayH = imgSize.height * scale
+        let originX = 10 + (inner.width - displayW) / 2
+        let originY = (inner.height - displayH) / 2
+        let nx = (location.x - originX) / max(1, displayW)
+        let ny = (location.y - originY) / max(1, displayH)
+        guard nx >= 0, nx <= 1, ny >= 0, ny <= 1 else { return }
+        healPoints.append(CGPoint(x: nx, y: ny))
+        scheduleRender()
     }
 
     // MARK: - Slider e selettore colore occhi
@@ -477,6 +570,8 @@ struct FaceEditScreen: View {
     private var resetRow: some View {
         Button("Ripristina") {
             withAnimation { controls = FaceEditControls() }
+            healPoints.removeAll()
+            healMode = false
             scheduleRender()
         }
         .font(Theme.caption)
@@ -536,10 +631,12 @@ struct FaceEditScreen: View {
         let ci = CIImage(cgImage: cg)
         let snapshot = controls
         let snapshotFaces = faces
+        let snapshotHeal = healPoints
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInteractive).async {
                 let processed = FaceRenderer.render(
-                    image: ci, faces: snapshotFaces, controls: snapshot)
+                    image: ci, faces: snapshotFaces, controls: snapshot,
+                    healPoints: snapshotHeal)
                 continuation.resume(returning: processed.rendered(maxDimension: 1400))
             }
         }
@@ -554,9 +651,12 @@ struct FaceEditScreen: View {
         let ci = CIImage(cgImage: cg)
         let snapshot = controls
         let snapshotFaces = faces
+        let snapshotHeal = healPoints
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let processed = FaceRenderer.render(image: ci, faces: snapshotFaces, controls: snapshot)
+            let processed = FaceRenderer.render(image: ci, faces: snapshotFaces,
+                                                controls: snapshot,
+                                                healPoints: snapshotHeal)
             let full = processed.rendered(maxDimension: 4096)
             DispatchQueue.main.async {
                 isProcessing = false

@@ -137,6 +137,7 @@ face = (ROOT / "Filmatura/Face/FaceRenderer.swift").read_text()
 analyzer = (ROOT / "Filmatura/Face/FaceAnalyzer.swift").read_text()
 face_ui = (ROOT / "Filmatura/Face/FaceEditScreen.swift").read_text()
 theme = (ROOT / "Filmatura/Support/Theme.swift").read_text()
+studio = (ROOT / "Filmatura/Studio/StudioScreen.swift").read_text()
 for source, token, label in [
     (cam, "appState.openStudio", "CameraScreen->AppState"),
     (cam, "ShutterButton", "CameraScreen->ShutterButton"),
@@ -151,6 +152,7 @@ for source, token, label in [
     (face, "CIAdditionCompositing", "ricomposizione dettagli"),
     (face, "CIColorClamp", "tetti morbidi e soglie maschera"),
     (face, "CIMedianFilter", "anti-imperfezioni"),
+    (face, "applyHeal", "rimozione a tocco (spot heal)"),
     (face, "applySkinTone", "tono pelle uniforme"),
     (face, "applySkinBrighten", "illumina viso"),
     (face, "skinBrighten", "controllo Illumina"),
@@ -173,10 +175,18 @@ for source, token, label in [
     (face_ui, '"Macchie"', "strumento Macchie"),
     (face_ui, '"Illumina"', "strumento Illumina"),
     (face_ui, '"Tono uniforme"', "strumento Tono uniforme"),
+    (face_ui, "healPoints", "tocchi di rimozione salvati"),
+    (face_ui, "healToggleRow", "pulsante Rimozione a tocco"),
+    (face_ui, "addHealPoint", "conversione tocco -> coordinate immagine"),
     (face_ui, "toolGlass", "bottoni strumenti Liquid Glass"),
     (face_ui, "liquidPanel", "pannello Liquid Glass"),
     (theme, "liquidPanel", "Theme: pannello liquid"),
     (theme, "toolGlass", "Theme: bottone strumento"),
+    (theme, "glassOrb", "Theme: sfera di vetro fotocamera"),
+    (cam, "glassOrb", "Camera: bottoni a sfera di vetro"),
+    (cam, "thinMaterial", "Camera: piastrelle vetro barra superiore"),
+    (studio, "clipShape(RoundedRectangle(cornerRadius: 16", "Studio: miniature arrotondate"),
+    (studio, "Theme.accentTeal", "Studio: stato vuoto a tema"),
 ]:
     if token not in source:
         errors.append(f"riferimento mancante: {label} ('{token}')")
@@ -200,12 +210,13 @@ for name in LUTS:
 # 6. workflow e project.yml
 wf = (ROOT / ".github/workflows/build-ipa.yml").read_text()
 for token in ["xcodegen generate", "upload-artifact", "generic/platform=iOS",
-              "Filmatura-unsigned.ipa"]:
+              "Filmatura-unsigned.ipa", "branches: [main, master]",
+              "gh release create latest"]:
     if token not in wf:
         errors.append(f"workflow: manca '{token}'")
 py = (ROOT / "project.yml").read_text()
 for token in ["it.filmatura.app", "NSCameraUsageDescription", "UILaunchScreen",
-              "FilmaturaTests", "16.4", "1.3.0"]:
+              "FilmaturaTests", "16.4", "1.4.0"]:
     if token not in py:
         errors.append(f"project.yml: manca '{token}'")
 

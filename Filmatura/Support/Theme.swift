@@ -113,4 +113,12 @@ extension View {
             .foregroundStyle(isSelected ? Color.white : Theme.text)
             .shadow(color: .black.opacity(isSelected ? 0.14 : 0.06), radius: 5, x: 0, y: 3)
     }
+
+    /// Sfera di vetro (Liquid Glass) per i bottoni tondi della fotocamera.
+    func glassOrb() -> some View {
+        self
+            .background(.thinMaterial, in: Circle())
+            .overlay(Circle().strokeBorder(.white.opacity(0.45), lineWidth: 1))
+            .shadow(color: .black.opacity(0.14), radius: 6, x: 0, y: 3)
+    }
 }

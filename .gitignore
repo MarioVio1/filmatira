@@ -10,3 +10,6 @@ upload/
 skills/
 tool-results/
 gh-deploy/
+
+# Variabili ambiente locali
+.env

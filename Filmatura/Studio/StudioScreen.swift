@@ -13,7 +13,7 @@ struct StudioScreen: View {
     @State private var editingItem: MediaItem?
     @State private var importResult: String?
 
-    private let columns = [GridItem(.adaptive(minimum: 100), spacing: 4)]
+    private let columns = [GridItem(.adaptive(minimum: 100), spacing: 10)]
 
     var body: some View {
         NavigationStack {
@@ -65,12 +65,12 @@ struct StudioScreen: View {
 
     private var gridView: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 4) {
+            LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(studio.items) { item in
                     cell(for: item)
                 }
             }
-            .padding(4)
+            .padding(12)
         }
     }
 
@@ -80,7 +80,7 @@ struct StudioScreen: View {
                 .resizable()
                 .scaledToFill()
                 .frame(height: 130)
-                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .contentShape(Rectangle())
                 .onTapGesture {
                     if item.kind == .photo {
@@ -89,6 +89,7 @@ struct StudioScreen: View {
                         playerURL = item.url
                     }
                 }
+                .shadow(color: .black.opacity(0.10), radius: 6, y: 3)
 
             HStack(spacing: 6) {
                 if item.kind == .video {
@@ -146,7 +147,7 @@ struct StudioScreen: View {
             Spacer()
             Image(systemName: "photo.stack")
                 .font(.system(size: 44))
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(Theme.accentTeal)
             Text("Il tuo Studio è vuoto")
                 .font(Theme.heading)
                 .foregroundStyle(Theme.text)
@@ -161,6 +162,7 @@ struct StudioScreen: View {
                     .padding(.vertical, 12)
                     .background(Theme.accent, in: Capsule())
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
             }
             Spacer()
         }
