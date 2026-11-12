@@ -283,15 +283,20 @@ enum FaceRenderer {
 
         guard let gradient = CIFilter(name: "CIRadialGradient") else { return image }
         gradient.setValue(CIVector(x: center.x, y: center.y), forKey: "inputCenter")
-        gradient.setValue(radius, forKey: "inputRadius")
+        // CIRadialGradient non ha "inputRadius" (crash KVC): usa inputRadius0
+        // (nocciolo pieno) e inputRadius1 (fine della sfumatura).
+        gradient.setValue(radius * 0.55, forKey: "inputRadius0")
+        gradient.setValue(radius * 1.35, forKey: "inputRadius1")
         gradient.setValue(CIColor(red: 1, green: 0.98, blue: 0.92, alpha: 1), forKey: "inputColor0")
         gradient.setValue(CIColor(red: 1, green: 0.98, blue: 0.92, alpha: 0), forKey: "inputColor1")
 
+        // CISoftLightBlendMode non ha "inputIntensity" (crash KVC): si regola
+        // l'intensita' miscelando il risultato verso l'immagine originale.
         let soft = CIFilter.softLightBlendMode()
         soft.inputImage = gradient.outputImage!.cropped(to: image.extent)
         soft.backgroundImage = image
-        soft.setValue(Float(amount * 0.45), forKey: "inputIntensity")
-        return soft.outputImage ?? image
+        let lit = soft.outputImage ?? image
+        return image.blending(image: lit, amount: CGFloat(amount * 0.45))
     }
 
     // MARK: - Maschere (render CoreGraphics, bianco su nero)

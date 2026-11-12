@@ -53,8 +53,10 @@ extension CIImage {
         let soft = CIFilter.softLightBlendMode()
         soft.inputImage = mono.outputImage!.cropped(to: extent)
         soft.backgroundImage = self
-        soft.setValue(Float(scaledAmount), forKey: "inputIntensity")
-        return soft.outputImage ?? self
+        // CISoftLightBlendMode non ha "inputIntensity" (crash KVC): si regola
+        // la quantita' miscelando il risultato verso l'immagine originale.
+        let softened = soft.outputImage ?? self
+        return self.blending(image: softened, amount: scaledAmount)
     }
 
     /// Vignetta cinematografica.
