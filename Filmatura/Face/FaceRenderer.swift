@@ -418,7 +418,7 @@ enum FaceRenderer {
         let mask = skinMask(for: faces, size: size,
                             feather: max(8, size.width * 0.008))
         let faceScale = faces.map { $0.faceWidth }.max() ?? size.width * 0.4
-        let radius = max(3, faceScale * (0.012 + 0.030 * amount))
+        let radius = max(3, faceScale * (0.012 + 0.030 * CGFloat(amount)))
         let low = image.blurred(radius: radius)
 
         let difference = CIFilter.differenceBlendMode()
@@ -586,9 +586,9 @@ enum FaceRenderer {
                 let cornerR = CIVector(x: face.mouthCornerRight.x,
                                        y: height - face.mouthCornerRight.y)
                 let radius = Float(face.faceWidth * 0.30)
-                let lift = Float(face.faceWidth * 0.055 * controls.smile)
+                let lift = Float(CGFloat(face.faceWidth) * 0.055 * CGFloat(controls.smile))
                 let warped = kernel.apply(extent: result.extent,
-                                          roiCallback: { _ in result.extent },
+                                          roiCallback: { _, _ in result.extent },
                                           arguments: [cornerL, cornerR, radius, lift])
                 if let warped {
                     result = warped.cropped(to: image.extent)
@@ -643,7 +643,7 @@ enum FaceRenderer {
         var result = image
 
         if blur > 0 {
-            let radius = (8.0 + 26.0 * blur) * max(1.0, size.width / 1400)
+            let radius = CGFloat(8.0 + 26.0 * blur) * max(1.0, size.width / 1400)
             let blurred = result.blurred(radius: radius)
             result = blend(base: blurred, top: result, mask: subject)
         }

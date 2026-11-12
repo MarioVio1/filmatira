@@ -158,8 +158,8 @@ enum FaceAnalyzer {
         request.outputPixelFormat = kCVPixelFormatType_OneComponent8
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         guard (try? handler.perform([request])) != nil,
-              let buffer = (request.results as? [VNPersonSegmentationObservation])?
-                  .first?.mask else {
+              let buffer = (request.results as? [VNPixelBufferObservation])?
+                  .first?.pixelBuffer else {
             return nil
         }
         let maskImage = CIImage(cvPixelBuffer: buffer)
