@@ -4,7 +4,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path("/home/z/my-project/Filmatura")
+ROOT = Path("/home/z/my-project")
 errors = []
 
 REQUIRED_SWIFT = [
@@ -134,6 +134,8 @@ ctrl = (ROOT / "Filmatura/Camera/CameraController.swift").read_text()
 cam = (ROOT / "Filmatura/Camera/CameraScreen.swift").read_text()
 lut = (ROOT / "Filmatura/LUT/LUTStore.swift").read_text()
 face = (ROOT / "Filmatura/Face/FaceRenderer.swift").read_text()
+analyzer = (ROOT / "Filmatura/Face/FaceAnalyzer.swift").read_text()
+face_ui = (ROOT / "Filmatura/Face/FaceEditScreen.swift").read_text()
 for source, token, label in [
     (cam, "appState.openStudio", "CameraScreen->AppState"),
     (cam, "ShutterButton", "CameraScreen->ShutterButton"),
@@ -143,9 +145,37 @@ for source, token, label in [
     (lut, "applyingCube", "store applica il cubo"),
     (face, "CIPinchDistortion", "pinch warp"),
     (face, "blendWithMask", "maschere blend"),
+    (face, "CIWarpKernel", "kernel warp sorriso"),
+    (face, "differenceBlendMode", "separazione di frequenze"),
+    (face, "additionCompositing", "ricomposizione dettagli"),
+    (face, "colorThreshold", "denti via soglia di luminosita'"),
+    (face, "CIMedianFilter", "anti-imperfezioni"),
+    (face, "skinMask", "maschera pelle"),
+    (face, "applyWarp", "pipeline warp"),
+    (face, "radius0", "gradiente radiale legale"),
+    (face, "EyeColorShade", "colore occhi"),
+    (face, "CIMultiplyBlendMode", "blend trucco moltiplicato"),
+    (analyzer, "VNGeneratePersonSegmentationRequest", "segmentazione persona"),
+    (analyzer, "personMask", "maschera persona in FaceData"),
+    (analyzer, "noseTip", "punta del naso"),
+    (analyzer, "contourEdge", "punti contorno derivati"),
+    (analyzer, "mouthCornerLeft", "angoli bocca"),
+    (face_ui, "FaceCategory", "categorie FaceLab"),
+    (face_ui, "eyeColorSection", "selettore colore occhi"),
+    (face_ui, "presetGrid", "griglia preset"),
 ]:
     if token not in source:
         errors.append(f"riferimento mancante: {label} ('{token}')")
+
+# 4b. chiavi KVC vietate (crash runtime su CIFilter)
+for rel in ["Filmatura/Face/FaceRenderer.swift",
+            "Filmatura/Face/FaceAnalyzer.swift",
+            "Filmatura/Support/CIImage+Filmatura.swift"]:
+    src = (ROOT / rel).read_text()
+    if 'inputIntensity' in src:
+        errors.append(f"{rel}: chiave KVC vietata 'inputIntensity'")
+    if re.search(r'setValue\([^)]*forKey:\s*"inputRadius"\)', src):
+        errors.append(f"{rel}: CIRadialGradient non ha 'inputRadius' (usa radius0/1)")
 
 # 5. i preset del catalogo devono corrispondere ai file .cube
 catalog = (ROOT / "Filmatura/LUT/LUTPreset.swift").read_text()
@@ -161,7 +191,7 @@ for token in ["xcodegen generate", "upload-artifact", "generic/platform=iOS",
         errors.append(f"workflow: manca '{token}'")
 py = (ROOT / "project.yml").read_text()
 for token in ["it.filmatura.app", "NSCameraUsageDescription", "UILaunchScreen",
-              "FilmaturaTests", "16.4"]:
+              "FilmaturaTests", "16.4", "1.2.0"]:
     if token not in py:
         errors.append(f"project.yml: manca '{token}'")
 

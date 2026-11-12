@@ -53,8 +53,9 @@ extension CIImage {
         let soft = CIFilter.softLightBlendMode()
         soft.inputImage = mono.outputImage!.cropped(to: extent)
         soft.backgroundImage = self
-        // CISoftLightBlendMode non ha "inputIntensity" (crash KVC): si regola
-        // la quantita' miscelando il risultato verso l'immagine originale.
+        // CISoftLightBlendMode non offre un parametro di intensita' (chiavi
+        // KVC invalide causano crash): si regola la quantita' miscelando il
+        // risultato verso l'immagine originale.
         let softened = soft.outputImage ?? self
         return self.blending(image: softened, amount: scaledAmount)
     }

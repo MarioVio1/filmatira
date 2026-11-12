@@ -1,13 +1,12 @@
-# macOS
+# Build e ambiente locale
 .DS_Store
-
-# Xcode (progetto generato da XcodeGen, non va committato)
-Filmatura.xcodeproj/
-build/
-DerivedData/
-*.xcuserdatad/
 xcuserdata/
-
-# Build intermedi
+DerivedData/
 *.ipa
-Payload/
+
+# Cartelle locali della sandbox (non fanno parte del progetto)
+download/
+upload/
+skills/
+tool-results/
+gh-deploy/

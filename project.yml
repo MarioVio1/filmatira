@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.1.0"
-    CURRENT_PROJECT_VERSION: 3
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: 4
     TARGETED_DEVICE_FAMILY: "1"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ""
@@ -29,8 +29,8 @@ targets:
       path: Filmatura/Info.plist
       properties:
         CFBundleDisplayName: Filmatura
-        CFBundleShortVersionString: "1.1.0"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "1.2.0"
+        CFBundleVersion: "4"
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "Filmatura usa la fotocamera per scattare foto e registrare video con i look cinematografici."
         NSMicrophoneUsageDescription: "Filmatura usa il microfono per registrare l'audio dei tuoi video."

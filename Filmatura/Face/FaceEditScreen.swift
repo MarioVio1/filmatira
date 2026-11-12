@@ -2,14 +2,16 @@ import SwiftUI
 import UIKit
 import PhotosUI
 
-/// Schermata Volto: rileva i volti e applica gli strumenti con Vision +
-/// CoreImage. Confronto per pressione, target per singolo volto, esporta.
+/// Schermata Volto stile FaceLab: strumenti organizzati in categorie a
+/// schede (Preset, Viso, Occhi, Sorriso, Pelle, Trucco, Luce, Sfondo,
+/// Look) su pannelli Liquid Glass, anteprima live e confronto a pressione.
 struct FaceEditScreen: View {
 
     @EnvironmentObject private var studio: MediaStore
     @State private var sourceImage: UIImage?
     @State private var faces: [FaceData] = []
     @State private var controls = FaceEditControls()
+    @State private var category: FaceCategory = .preset
     @State private var preview: UIImage?
     @State private var isDetecting = false
     @State private var isProcessing = false
@@ -55,6 +57,36 @@ struct FaceEditScreen: View {
         }
     }
 
+    // MARK: - Categorie
+
+    private enum FaceCategory: String, CaseIterable, Identifiable {
+        case preset = "Preset"
+        case face = "Viso"
+        case eyes = "Occhi"
+        case smile = "Sorriso"
+        case skin = "Pelle"
+        case makeup = "Trucco"
+        case light = "Luce"
+        case background = "Sfondo"
+        case era = "Look"
+
+        var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .preset: return "wand.and.stars"
+            case .face: return "face.dashed"
+            case .eyes: return "eye"
+            case .smile: return "face.smiling"
+            case .skin: return "drop.degreesign"
+            case .makeup: return "lipstick"
+            case .light: return "lightbulb"
+            case .background: return "photo.on.rectangle.angled"
+            case .era: return "camera.filters"
+            }
+        }
+    }
+
     // MARK: - Stato vuoto
 
     private var emptyState: some View {
@@ -66,7 +98,7 @@ struct FaceEditScreen: View {
             Text("Scegli un ritratto da ritoccare")
                 .font(Theme.heading)
                 .foregroundStyle(Theme.text)
-            Text("Pelle, occhi, denti, pomelli, labbra e luce: tutto elaborato on-device.")
+            Text("Pelle, occhi, denti, sorriso, viso, trucco, luce e sfondo: tutto elaborato on-device.")
                 .font(Theme.body)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -117,22 +149,146 @@ struct FaceEditScreen: View {
         }
     }
 
-    // MARK: - Pannello strumenti
+    // MARK: - Pannello strumenti (schede FaceLab)
 
     private var toolPanel: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                faceTargets
-                presetRow
-                eraChips
-                toolSliders
-                makeupSection
-                resetRow
+        VStack(spacing: 0) {
+            categoryBar
+            Divider().opacity(0.25)
+            ScrollView {
+                VStack(spacing: 14) {
+                    if faces.count > 1 {
+                        faceTargets
+                    }
+                    categoryContent
+                    resetRow
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(16)
         }
-        .frame(height: 340)
+        .frame(height: 336)
         .background(.ultraThinMaterial)
+        .overlay(
+            Rectangle()
+                .fill(.white.opacity(0.5))
+                .frame(height: 1),
+            alignment: .top
+        )
+    }
+
+    private var categoryBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(FaceCategory.allCases) { item in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            category = item
+                        }
+                    } label: {
+                        Label(item.rawValue, systemImage: item.icon)
+                            .font(Theme.caption.weight(.semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .glassButton(isSelected: category == item)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+    }
+
+    @ViewBuilder
+    private var categoryContent: some View {
+        switch category {
+        case .preset:
+            presetGrid
+        case .face:
+            VStack(spacing: 12) {
+                sliderRow("Viso snello", $controls.slimFace)
+                sliderRow("Guance", $controls.cheeks)
+                sliderRow("Pomelli", $controls.cheekbones)
+                sliderRow("Mandibola", $controls.jaw)
+                sliderRow("Mento", $controls.chin)
+                sliderRow("Naso", $controls.nose)
+            }
+        case .eyes:
+            VStack(spacing: 12) {
+                sliderRow("Occhi grandi", $controls.eyeEnlarge)
+                sliderRow("Occhi luminosi", $controls.eyeBrightness)
+                sliderRow("Occhiaie", $controls.underEye)
+                eyeColorSection
+            }
+        case .smile:
+            VStack(spacing: 12) {
+                sliderRow("Sorriso", $controls.smile)
+                sliderRow("Denti", $controls.teethWhitening)
+            }
+        case .skin:
+            VStack(spacing: 12) {
+                sliderRow("Leviga", $controls.skinSmooth)
+                sliderRow("Imperfezioni", $controls.blemish)
+                sliderRow("Abbronzatura", $controls.tan)
+                sliderRow("Glow viso", $controls.skinGlow)
+            }
+        case .makeup:
+            makeupSection
+        case .light:
+            VStack(spacing: 12) {
+                sliderRow("Luce ritratto", $controls.portraitLight)
+            }
+        case .background:
+            VStack(spacing: 12) {
+                sliderRow("Sfocatura", $controls.backgroundBlur)
+                sliderRow("Bianco e nero", $controls.backgroundMono)
+            }
+        case .era:
+            eraChips
+        }
+    }
+
+    // MARK: - Preset
+
+    private var presetGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            presetCard("Fai bello", icon: "wand.and.stars",
+                       preset: FaceEditControls.beautyPreset(),
+                       isSelected: controls.isBeautyPreset)
+            presetCard("Naturale", icon: "leaf.fill",
+                       preset: FaceEditControls.naturalePreset(),
+                       isSelected: controls.isNaturalePreset)
+            presetCard("Glam", icon: "sparkles",
+                       preset: FaceEditControls.glamPreset(),
+                       isSelected: controls.isGlamPreset)
+            presetCard("Dolce", icon: "cloud.fill",
+                       preset: FaceEditControls.dolcePreset(),
+                       isSelected: controls.isDolcePreset)
+        }
+    }
+
+    private func presetCard(_ title: String,
+                            icon: String,
+                            preset: FaceEditControls,
+                            isSelected: Bool) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                controls = isSelected ? FaceEditControls() : preset
+            }
+            scheduleRender()
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                Text(title)
+                    .font(Theme.body.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .glassButton(isSelected: isSelected)
+        }
+        .buttonStyle(.plain)
     }
 
     private var faceTargets: some View {
@@ -140,80 +296,20 @@ struct FaceEditScreen: View {
             Text("Voli rilevati: \(faces.count)")
                 .font(Theme.caption)
                 .foregroundStyle(Theme.textSecondary)
-
-            if faces.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        Button("Tutti") {
-                            controls.targetFaceID = nil
-                            scheduleRender()
-                        }
-                            .chipStyle(isSelected: controls.targetFaceID == nil)
-
-                        ForEach(Array(faces.enumerated()), id: \.element.id) { index, face in
-                            Button("Volto \(index + 1)") {
-                                controls.targetFaceID = face.id
-                                scheduleRender()
-                            }
-                            .chipStyle(isSelected: controls.targetFaceID == face.id)
-                        }
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Tre preset istantanei: Fai bello, Naturale, Glam.
-    private var presetRow: some View {
-        HStack(spacing: 8) {
-            presetButton("Fai bello", icon: "wand.and.stars",
-                         preset: FaceEditControls.beautyPreset(),
-                         isSelected: controls.isBeautyPreset)
-            presetButton("Naturale", icon: "leaf.fill",
-                         preset: FaceEditControls.naturalePreset(),
-                         isSelected: controls.isNaturalePreset)
-            presetButton("Glam", icon: "sparkles",
-                         preset: FaceEditControls.glamPreset(),
-                         isSelected: controls.isGlamPreset)
-        }
-    }
-
-    private func presetButton(_ title: String,
-                              icon: String,
-                              preset: FaceEditControls,
-                              isSelected: Bool) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                controls = isSelected ? FaceEditControls() : preset
-            }
-            scheduleRender()
-        } label: {
-            Label(title, systemImage: icon)
-                .font(Theme.caption.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .glassButton(isSelected: isSelected)
-        }
-    }
-
-    private var eraChips: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Look epoca")
-                .font(Theme.caption)
-                .foregroundStyle(Theme.textSecondary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(EraLook.allCases) { look in
-                        Button(look.rawValue) {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                controls.eraLook = look
-                            }
+                    Button("Tutti") {
+                        controls.targetFaceID = nil
+                        scheduleRender()
+                    }
+                    .chipStyle(isSelected: controls.targetFaceID == nil)
+
+                    ForEach(Array(faces.enumerated()), id: \.element.id) { index, face in
+                        Button("Volto \(index + 1)") {
+                            controls.targetFaceID = face.id
                             scheduleRender()
                         }
-                        .chipStyle(isSelected: controls.eraLook == look)
+                        .chipStyle(isSelected: controls.targetFaceID == face.id)
                     }
                 }
             }
@@ -221,22 +317,7 @@ struct FaceEditScreen: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var toolSliders: some View {
-        VStack(spacing: 14) {
-            sliderRow("Pelle liscia", $controls.skinSmooth)
-            sliderRow("Occhiaie", $controls.underEye)
-            sliderRow("Occhi", $controls.eyeBrightness)
-            sliderRow("Occhi grandi", $controls.eyeEnlarge)
-            sliderRow("Denti", $controls.teethWhitening)
-            sliderRow("Glow viso", $controls.skinGlow)
-            sliderRow("Pomelli", $controls.cheekSculpt)
-            sliderRow("Mandibola", $controls.jawSculpt)
-            sliderRow("Viso snello", $controls.faceSlim)
-            sliderRow("Labbra", $controls.lipVibrance)
-            sliderRow("Luce ritratto", $controls.portraitLight)
-            sliderRow("Sfondo sfocato", $controls.backgroundBlur)
-        }
-    }
+    // MARK: - Slider e selettore colore occhi
 
     @ViewBuilder
     private func sliderRow(_ title: String, _ value: Binding<Double>) -> some View {
@@ -257,11 +338,51 @@ struct FaceEditScreen: View {
         }
     }
 
+    private var eyeColorSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Colore occhi")
+                    .font(Theme.body)
+                    .foregroundStyle(Theme.text)
+                Spacer()
+                Text(controls.eyeColorShade.rawValue)
+                    .font(Theme.caption)
+                    .foregroundStyle(controls.eyeColor > 0 ? Theme.accent : Theme.textSecondary)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(EyeColorShade.allCases) { shade in
+                        Button {
+                            controls.eyeColorShade = shade
+                            if controls.eyeColor == 0 {
+                                controls.eyeColor = 0.5
+                            }
+                            scheduleRender()
+                        } label: {
+                            Circle()
+                                .fill(Color(red: shade.rgb.0, green: shade.rgb.1, blue: shade.rgb.2))
+                                .frame(width: 26, height: 26)
+                                .overlay(
+                                    Circle().strokeBorder(
+                                        controls.eyeColorShade == shade ? Theme.accent : Theme.textSecondary.opacity(0.4),
+                                        lineWidth: controls.eyeColorShade == shade ? 2 : 1)
+                                )
+                        }
+                        .accessibilityLabel("Colore occhi \(shade.rawValue)")
+                    }
+                    Spacer()
+                }
+            }
+            Slider(value: $controls.eyeColor, in: 0...1)
+                .tint(Theme.accent)
+                .onChange(of: controls.eyeColor) { _ in scheduleRender() }
+        }
+    }
+
+    // MARK: - Trucco e look epoca
+
     private var makeupSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Trucco")
-                .font(Theme.caption)
-                .foregroundStyle(Theme.textSecondary)
+        VStack(spacing: 12) {
             makeupRow("Cipria", value: $controls.foundation,
                       shades: MakeupShade.foundationShades, shade: $controls.foundationShade)
             makeupRow("Contouring", value: $controls.contour, shades: nil, shade: nil)
@@ -273,6 +394,7 @@ struct FaceEditScreen: View {
                       shades: MakeupShade.eyelinerShades, shade: $controls.eyelinerShade)
             makeupRow("Rossetto", value: $controls.lipstick,
                       shades: MakeupShade.lipstickShades, shade: $controls.lipstickShade)
+            sliderRow("Labbra vive", $controls.lipVibrance)
         }
     }
 
@@ -316,6 +438,28 @@ struct FaceEditScreen: View {
                 .tint(Theme.accent)
                 .onChange(of: value.wrappedValue) { _ in scheduleRender() }
         }
+    }
+
+    private var eraChips: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Look epoca")
+                .font(Theme.caption)
+                .foregroundStyle(Theme.textSecondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(EraLook.allCases) { look in
+                        Button(look.rawValue) {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                controls.eraLook = look
+                            }
+                            scheduleRender()
+                        }
+                        .chipStyle(isSelected: controls.eraLook == look)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var resetRow: some View {
