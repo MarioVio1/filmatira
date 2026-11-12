@@ -2,16 +2,17 @@ import SwiftUI
 import UIKit
 import PhotosUI
 
-/// Schermata Volto stile FaceLab: strumenti organizzati in categorie a
-/// schede (Preset, Viso, Occhi, Sorriso, Pelle, Trucco, Luce, Sfondo,
-/// Look) su pannelli Liquid Glass, anteprima live e confronto a pressione.
+/// Schermata Volto stile AirBrush: anteprima grande con confronto a
+/// pressione, preset «Fai bello» sempre a portata di tocco e barra
+/// strumenti per categoria con la PELLE come primo strumento (leviga,
+/// macchie, illumina, tono uniforme). Tutto su pannelli Liquid Glass.
 struct FaceEditScreen: View {
 
     @EnvironmentObject private var studio: MediaStore
     @State private var sourceImage: UIImage?
     @State private var faces: [FaceData] = []
     @State private var controls = FaceEditControls()
-    @State private var category: FaceCategory = .preset
+    @State private var category: FaceCategory = .pelle
     @State private var preview: UIImage?
     @State private var isDetecting = false
     @State private var isProcessing = false
@@ -22,10 +23,12 @@ struct FaceEditScreen: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            Group {
                 if let sourceImage {
-                    imageArea(for: sourceImage)
-                    toolPanel
+                    VStack(spacing: 8) {
+                        imageArea(for: sourceImage)
+                        toolPanel
+                    }
                 } else {
                     emptyState
                 }
@@ -57,32 +60,30 @@ struct FaceEditScreen: View {
         }
     }
 
-    // MARK: - Categorie
+    // MARK: - Categorie (pelle prima di tutto, come AirBrush)
 
     private enum FaceCategory: String, CaseIterable, Identifiable {
-        case preset = "Preset"
-        case face = "Viso"
-        case eyes = "Occhi"
-        case smile = "Sorriso"
-        case skin = "Pelle"
-        case makeup = "Trucco"
-        case light = "Luce"
-        case background = "Sfondo"
-        case era = "Look"
+        case pelle = "Pelle"
+        case occhi = "Occhi"
+        case sorriso = "Sorriso"
+        case viso = "Viso"
+        case trucco = "Trucco"
+        case luce = "Luce"
+        case sfondo = "Sfondo"
+        case look = "Look"
 
         var id: String { rawValue }
 
         var icon: String {
             switch self {
-            case .preset: return "wand.and.stars"
-            case .face: return "face.dashed"
-            case .eyes: return "eye"
-            case .smile: return "face.smiling"
-            case .skin: return "drop.degreesign"
-            case .makeup: return "lipstick"
-            case .light: return "lightbulb"
-            case .background: return "photo.on.rectangle.angled"
-            case .era: return "camera.filters"
+            case .pelle: return "drop.degreesign"
+            case .occhi: return "eye"
+            case .sorriso: return "face.smiling"
+            case .viso: return "face.dashed"
+            case .trucco: return "lipstick"
+            case .luce: return "lightbulb"
+            case .sfondo: return "photo.on.rectangle.angled"
+            case .look: return "camera.filters"
             }
         }
     }
@@ -95,10 +96,10 @@ struct FaceEditScreen: View {
             Image(systemName: "face.smiling.inverse")
                 .font(.system(size: 48))
                 .foregroundStyle(Theme.accentTeal)
-            Text("Scegli un ritratto da ritoccare")
-                .font(Theme.heading)
+            Text("Ritocco pelle in stile AirBrush")
+                .font(Theme.title)
                 .foregroundStyle(Theme.text)
-            Text("Pelle, occhi, denti, sorriso, viso, trucco, luce e sfondo: tutto elaborato on-device.")
+            Text("Leviga, rimuovi le macchie, illumina il viso e uniforma il tono: tutto elaborato on-device, nessun server.")
                 .font(Theme.body)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -122,8 +123,8 @@ struct FaceEditScreen: View {
             Image(uiImage: showingOriginal ? image : (preview ?? image))
                 .resizable()
                 .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
-                .padding(.horizontal, 12)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                .padding(.horizontal, 10)
 
             if isDetecting || isProcessing {
                 ProgressView()
@@ -144,131 +145,51 @@ struct FaceEditScreen: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(.black.opacity(0.6), in: Capsule())
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 10)
             }
         }
     }
 
-    // MARK: - Pannello strumenti (schede FaceLab)
+    // MARK: - Pannello strumenti (stile AirBrush, Liquid Glass)
 
     private var toolPanel: some View {
         VStack(spacing: 0) {
-            categoryBar
-            Divider().opacity(0.25)
-            ScrollView {
-                VStack(spacing: 14) {
-                    if faces.count > 1 {
-                        faceTargets
-                    }
-                    categoryContent
-                    resetRow
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
+            presetGrid
+            Divider().opacity(0.18)
+            toolStrip
+            Divider().opacity(0.18)
+            categoryContentArea
         }
-        .frame(height: 336)
-        .background(.ultraThinMaterial)
-        .overlay(
-            Rectangle()
-                .fill(.white.opacity(0.5))
-                .frame(height: 1),
-            alignment: .top
-        )
+        .frame(height: 348)
+        .liquidPanel()
+        .padding(.horizontal, 10)
+        .padding(.bottom, 4)
     }
 
-    private var categoryBar: some View {
+    /// Preset sempre visibili: «Fai bello» per il ritocco completo,
+    /// poi le varianti piu' leggere.
+    private var presetGrid: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(FaceCategory.allCases) { item in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            category = item
-                        }
-                    } label: {
-                        Label(item.rawValue, systemImage: item.icon)
-                            .font(Theme.caption.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .glassButton(isSelected: category == item)
-                    }
-                    .buttonStyle(.plain)
-                }
+                presetChip("Fai bello", icon: "wand.and.stars",
+                           preset: FaceEditControls.beautyPreset(),
+                           isSelected: controls.isBeautyPreset)
+                presetChip("Naturale", icon: "leaf.fill",
+                           preset: FaceEditControls.naturalePreset(),
+                           isSelected: controls.isNaturalePreset)
+                presetChip("Glam", icon: "sparkles",
+                           preset: FaceEditControls.glamPreset(),
+                           isSelected: controls.isGlamPreset)
+                presetChip("Dolce", icon: "cloud.fill",
+                           preset: FaceEditControls.dolcePreset(),
+                           isSelected: controls.isDolcePreset)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
             .padding(.vertical, 10)
         }
     }
 
-    @ViewBuilder
-    private var categoryContent: some View {
-        switch category {
-        case .preset:
-            presetGrid
-        case .face:
-            VStack(spacing: 12) {
-                sliderRow("Viso snello", $controls.slimFace)
-                sliderRow("Guance", $controls.cheeks)
-                sliderRow("Pomelli", $controls.cheekbones)
-                sliderRow("Mandibola", $controls.jaw)
-                sliderRow("Mento", $controls.chin)
-                sliderRow("Naso", $controls.nose)
-            }
-        case .eyes:
-            VStack(spacing: 12) {
-                sliderRow("Occhi grandi", $controls.eyeEnlarge)
-                sliderRow("Occhi luminosi", $controls.eyeBrightness)
-                sliderRow("Occhiaie", $controls.underEye)
-                eyeColorSection
-            }
-        case .smile:
-            VStack(spacing: 12) {
-                sliderRow("Sorriso", $controls.smile)
-                sliderRow("Denti", $controls.teethWhitening)
-            }
-        case .skin:
-            VStack(spacing: 12) {
-                sliderRow("Leviga", $controls.skinSmooth)
-                sliderRow("Imperfezioni", $controls.blemish)
-                sliderRow("Abbronzatura", $controls.tan)
-                sliderRow("Glow viso", $controls.skinGlow)
-            }
-        case .makeup:
-            makeupSection
-        case .light:
-            VStack(spacing: 12) {
-                sliderRow("Luce ritratto", $controls.portraitLight)
-            }
-        case .background:
-            VStack(spacing: 12) {
-                sliderRow("Sfocatura", $controls.backgroundBlur)
-                sliderRow("Bianco e nero", $controls.backgroundMono)
-            }
-        case .era:
-            eraChips
-        }
-    }
-
-    // MARK: - Preset
-
-    private var presetGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            presetCard("Fai bello", icon: "wand.and.stars",
-                       preset: FaceEditControls.beautyPreset(),
-                       isSelected: controls.isBeautyPreset)
-            presetCard("Naturale", icon: "leaf.fill",
-                       preset: FaceEditControls.naturalePreset(),
-                       isSelected: controls.isNaturalePreset)
-            presetCard("Glam", icon: "sparkles",
-                       preset: FaceEditControls.glamPreset(),
-                       isSelected: controls.isGlamPreset)
-            presetCard("Dolce", icon: "cloud.fill",
-                       preset: FaceEditControls.dolcePreset(),
-                       isSelected: controls.isDolcePreset)
-        }
-    }
-
-    private func presetCard(_ title: String,
+    private func presetChip(_ title: String,
                             icon: String,
                             preset: FaceEditControls,
                             isSelected: Bool) -> some View {
@@ -278,18 +199,109 @@ struct FaceEditScreen: View {
             }
             scheduleRender()
         } label: {
-            VStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                Text(title)
-                    .font(Theme.body.weight(.semibold))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .glassButton(isSelected: isSelected)
+            Label(title, systemImage: icon)
+                .font(Theme.caption.weight(.semibold))
+                .padding(.horizontal, 13)
+                .padding(.vertical, 9)
+                .glassButton(isSelected: isSelected)
         }
         .buttonStyle(.plain)
     }
+
+    /// Barra strumenti: icone con etichetta, come le strip di AirBrush.
+    private var toolStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(FaceCategory.allCases) { item in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            category = item
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: item.icon)
+                                .font(.system(size: 17, weight: .semibold))
+                            Text(item.rawValue)
+                                .font(.system(size: 10.5, weight: .semibold))
+                        }
+                        .frame(width: 78, height: 52)
+                        .toolGlass(isSelected: category == item)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Strumenti \(item.rawValue)")
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var categoryContentArea: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if faces.count > 1 {
+                    faceTargets
+                }
+                categoryContent
+                resetRow
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
+        }
+        .frame(height: 206)
+    }
+
+    @ViewBuilder
+    private var categoryContent: some View {
+        switch category {
+        case .pelle:
+            VStack(spacing: 12) {
+                sliderRow("Leviga", $controls.skinSmooth)
+                sliderRow("Macchie", $controls.blemish)
+                sliderRow("Illumina", $controls.skinBrighten)
+                sliderRow("Tono uniforme", $controls.skinTone)
+                sliderRow("Abbronzatura", $controls.tan)
+                sliderRow("Glow viso", $controls.skinGlow)
+            }
+        case .occhi:
+            VStack(spacing: 12) {
+                sliderRow("Occhi grandi", $controls.eyeEnlarge)
+                sliderRow("Occhi luminosi", $controls.eyeBrightness)
+                sliderRow("Occhiaie", $controls.underEye)
+                eyeColorSection
+            }
+        case .sorriso:
+            VStack(spacing: 12) {
+                sliderRow("Sorriso", $controls.smile)
+                sliderRow("Denti", $controls.teethWhitening)
+            }
+        case .viso:
+            VStack(spacing: 12) {
+                sliderRow("Viso snello", $controls.slimFace)
+                sliderRow("Guance", $controls.cheeks)
+                sliderRow("Pomelli", $controls.cheekbones)
+                sliderRow("Mandibola", $controls.jaw)
+                sliderRow("Mento", $controls.chin)
+                sliderRow("Naso", $controls.nose)
+            }
+        case .trucco:
+            makeupSection
+        case .luce:
+            VStack(spacing: 12) {
+                sliderRow("Luce ritratto", $controls.portraitLight)
+            }
+        case .sfondo:
+            VStack(spacing: 12) {
+                sliderRow("Sfocatura", $controls.backgroundBlur)
+                sliderRow("Bianco e nero", $controls.backgroundMono)
+            }
+        case .look:
+            eraChips
+        }
+    }
+
+    // MARK: - Volti multipli
 
     private var faceTargets: some View {
         VStack(alignment: .leading, spacing: 8) {

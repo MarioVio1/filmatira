@@ -143,8 +143,8 @@ struct CameraScreen: View {
         .padding(.bottom, 10)
         .background(alignment: .bottom) {
             Rectangle()
-                .fill(Theme.background.opacity(0.82))
-                .background(.ultraThinMaterial)
+                .fill(Theme.background.opacity(0.45))
+                .background(.thinMaterial)
                 .ignoresSafeArea(edges: .bottom)
         }
     }

@@ -105,9 +105,11 @@ struct FaceEditControls: Equatable {
     var smile: Double = 0             // sorriso (warp angoli bocca)
     var teethWhitening: Double = 0    // denti piu' bianchi
 
-    // Pelle
-    var skinSmooth: Double = 0        // leviga con separazione di frequenze
-    var blemish: Double = 0           // anti-imperfezioni (mediana)
+    // Pelle (il cuore del ritocco stile AirBrush)
+    var skinSmooth: Double = 0        // leviga (separazione di frequenze a segno corretto)
+    var blemish: Double = 0           // anti-macchie mirato (mediana + soglia)
+    var skinBrighten: Double = 0      // illumina il viso
+    var skinTone: Double = 0          // tono pelle uniforme (meno rossori)
     var tan: Double = 0               // abbronzatura calda
     var skinGlow: Double = 0          // glow viso
 
@@ -139,35 +141,38 @@ struct FaceEditControls: Equatable {
         slimFace == 0 && cheeks == 0 && cheekbones == 0 && jaw == 0 &&
         chin == 0 && nose == 0 && eyeEnlarge == 0 && eyeBrightness == 0 &&
         underEye == 0 && eyeColor == 0 && smile == 0 && teethWhitening == 0 &&
-        skinSmooth == 0 && blemish == 0 && tan == 0 && skinGlow == 0 &&
+        skinSmooth == 0 && blemish == 0 && skinBrighten == 0 &&
+        skinTone == 0 && tan == 0 && skinGlow == 0 &&
         portraitLight == 0 && backgroundBlur == 0 && backgroundMono == 0 &&
         foundation == 0 && contour == 0 && blush == 0 && eyeshadow == 0 &&
         eyeliner == 0 && lipstick == 0 && lipVibrance == 0 && eraLook == .none
     }
 
-    /// Preset «Fai bello»: pelle pulita, occhi freschi, sorriso leggero,
-    /// viso scolpito con moderazione, luce e sfondo ritratto.
+    /// Preset «Fai bello»: prima la pelle (pulita, uniforme, luminosa),
+    /// poi occhi freschi, sorriso leggero e un velo di trucco.
     static func beautyPreset() -> FaceEditControls {
         var c = FaceEditControls()
-        c.skinSmooth = 0.50
-        c.blemish = 0.50
-        c.underEye = 0.40
+        c.skinSmooth = 0.55
+        c.blemish = 0.60
+        c.skinTone = 0.35
+        c.skinBrighten = 0.40
+        c.underEye = 0.45
         c.teethWhitening = 0.45
         c.eyeBrightness = 0.40
-        c.eyeEnlarge = 0.15
-        c.smile = 0.20
-        c.slimFace = 0.18
-        c.cheekbones = 0.28
-        c.cheeks = 0.15
-        c.tan = 0.10
-        c.skinGlow = 0.25
-        c.portraitLight = 0.45
+        c.eyeEnlarge = 0.12
+        c.smile = 0.16
+        c.slimFace = 0.14
+        c.cheeks = 0.12
+        c.cheekbones = 0.20
+        c.skinGlow = 0.22
+        c.tan = 0.08
+        c.portraitLight = 0.35
         c.backgroundBlur = 0.30
-        c.foundation = 0.35
-        c.contour = 0.18
-        c.blush = 0.28
-        c.lipstick = 0.25
-        c.lipVibrance = 0.30
+        c.foundation = 0.25
+        c.contour = 0.14
+        c.blush = 0.22
+        c.lipstick = 0.18
+        c.lipVibrance = 0.28
         return c
     }
 
@@ -175,21 +180,25 @@ struct FaceEditControls: Equatable {
     static func naturalePreset() -> FaceEditControls {
         var c = FaceEditControls()
         c.skinSmooth = 0.35
-        c.blemish = 0.45
-        c.underEye = 0.35
+        c.blemish = 0.55
+        c.skinTone = 0.25
+        c.skinBrighten = 0.25
+        c.underEye = 0.30
         c.teethWhitening = 0.30
         c.eyeBrightness = 0.20
-        c.skinGlow = 0.15
-        c.portraitLight = 0.20
+        c.skinGlow = 0.12
+        c.portraitLight = 0.18
         return c
     }
 
     /// Preset «Glam»: scultura decisa, occhi grandi, trucco da serata.
     static func glamPreset() -> FaceEditControls {
         var c = FaceEditControls()
-        c.skinSmooth = 0.55
-        c.blemish = 0.55
-        c.underEye = 0.45
+        c.skinSmooth = 0.62
+        c.blemish = 0.70
+        c.skinTone = 0.40
+        c.skinBrighten = 0.45
+        c.underEye = 0.50
         c.eyeBrightness = 0.50
         c.eyeEnlarge = 0.20
         c.smile = 0.25
@@ -219,8 +228,10 @@ struct FaceEditControls: Equatable {
     /// Preset «Dolce»: glow soffuso, guance rosate, sorriso delicato.
     static func dolcePreset() -> FaceEditControls {
         var c = FaceEditControls()
-        c.skinSmooth = 0.40
-        c.blemish = 0.40
+        c.skinSmooth = 0.45
+        c.blemish = 0.55
+        c.skinTone = 0.30
+        c.skinBrighten = 0.35
         c.underEye = 0.35
         c.eyeBrightness = 0.30
         c.smile = 0.30
@@ -260,9 +271,11 @@ enum EraLook: String, CaseIterable, Identifiable {
     }
 }
 
-/// Renderer FaceLab: maschere disegnate dai landmark, separazione di
-/// frequenze per la pelle, soglia di luminosita' per i denti, warp guidato
-/// dal contorno reale e sfondo ritratto con segmentazione persona.
+/// Renderer di ritocco pelle stile AirBrush: macchie rimosse in modo
+/// mirato (mediana + soglia), levigatura a separazione di frequenze a
+/// segno corretto, tono uniforme e luce viso, trucco e denti con maschere
+/// disegnate dai landmark Vision, warp guidato dal contorno reale e
+/// sfondo ritratto con segmentazione persona.
 enum FaceRenderer {
 
     /// Kernel di warp per il sorriso: alza gli angoli della bocca con una
@@ -293,14 +306,22 @@ enum FaceRenderer {
         }
         let size = image.extent.size
 
-        // 1. Pelle: imperfezioni, levigatura a separazione di frequenze,
-        //    abbronzatura, glow.
+        // 1. Pelle stile AirBrush: macchie mirate, levigatura a separazione
+        //    di frequenze, tono uniforme, luce viso, abbronzatura e glow.
         if controls.blemish > 0 {
             result = applyBlemish(result, faces: selected, amount: controls.blemish)
         }
         if controls.skinSmooth > 0 {
             result = applySkinSmoothing(result, faces: selected,
                                         amount: controls.skinSmooth)
+        }
+        if controls.skinTone > 0 {
+            result = applySkinTone(result, faces: selected,
+                                   amount: controls.skinTone)
+        }
+        if controls.skinBrighten > 0 {
+            result = applySkinBrighten(result, faces: selected,
+                                       amount: controls.skinBrighten)
         }
         if controls.tan > 0 {
             result = applyTan(result, faces: selected, amount: controls.tan)
@@ -388,18 +409,67 @@ enum FaceRenderer {
 
     // MARK: - Pelle
 
-    /// Anti-imperfezioni: doppia mediana (smorza brufoli e pori) miscelata
-    /// solo sulla pelle, preservando occhi e labbra.
+    /// Anti-macchie mirato (stile AirBrush): individua solo i pixel che
+    /// divergono dalla mediana locale (brufoli, pori, piccole macchie) e
+    /// li sostituisce con la mediana stessa. Pelle sana, occhi, labbra e
+    /// capelli restano intatti: la maschera pelle protegge i tratti e i
+    /// limiti di luminosita' escludono zone scure e riflessi speculari.
     private static func applyBlemish(_ image: CIImage,
                                      faces: [FaceData],
                                      amount: Double) -> CIImage {
         let size = image.extent.size
-        let mask = skinMask(for: faces, size: size,
+        let skin = skinMask(for: faces, size: size,
                             feather: max(8, size.width * 0.008))
-        let once = median(image)
-        let twice = median(once)
-        let top = image.blending(image: twice, amount: CGFloat(0.85 * amount))
-        return blend(base: image, top: top, mask: mask)
+        let med = median(median(image))
+
+        // Magnitudine della differenza locale: alta sulle macchie.
+        let diff = blendNamed("CIDifferenceBlendMode", top: image, base: med)
+        let gray = luminance(of: diff)
+
+        // Maschera morbida delle macchie: solo differenze evidenti, pesate
+        // dallo slider (a intensita' bassa tocca solo le macchie nette).
+        let threshold = CGFloat(0.045 + 0.03 * (1.0 - amount))
+        let gain = CGFloat(9.0 + 7.0 * amount)
+        let spots = gray.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: gain, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: gain, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: gain, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+            "inputBiasVector": CIVector(x: -gain * threshold,
+                                        y: -gain * threshold,
+                                        z: -gain * threshold, w: 0),
+        ])
+
+        // Limiti di luminosita': esclude capelli e ciglia (scuri) e riflessi
+        // (luminosissimi), cosi' la mediana non strappa dettagli reali.
+        let lum = luminance(of: image)
+        let darkGate = lum.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 8, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 8, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 8, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+            "inputBiasVector": CIVector(x: -1.6, y: -1.6, z: -1.6, w: 0),
+        ])
+        let brightGate = lum.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: -8, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: -8, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: -8, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+            "inputBiasVector": CIVector(x: 7.4, y: 7.4, z: 7.4, w: 0),
+        ])
+
+        // Intersezione: macchie ∩ pelle ∩ (non scuro) ∩ (non speculare).
+        let combined = multiplyMasks([spots, darkGate, brightGate, skin],
+                                     extent: image.extent)
+            .applyingFilter("CIColorClamp", parameters: [
+                "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 0),
+                "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1),
+            ])
+        let filter = CIFilter.blendWithMask()
+        filter.inputImage = med
+        filter.backgroundImage = image
+        filter.setValue(combined, forKey: "inputMaskImage")
+        return filter.outputImage?.cropped(to: image.extent) ?? image
     }
 
     private static func median(_ image: CIImage) -> CIImage {
@@ -408,9 +478,11 @@ enum FaceRenderer {
         return filter?.outputImage?.cropped(to: image.extent) ?? image
     }
 
-    /// Levigatura con separazione di frequenze: bassa frequenza (sfocata)
-    /// piu' una parte dei dettagli originali, cosi' la pelle resta naturale
-    /// senza effetto plastica.
+    /// Levigatura pelle stile AirBrush con separazione di frequenze a
+    /// segno corretto: la pelle prende la bassa frequenza (tono uniforme)
+    /// mentre una frazione dei dettagli torna sopra CON IL SEGNO giusto.
+    /// Rispetto alla differenza in valore assoluto niente aloni e niente
+    /// pelle "lavata": pori e peluzzi restano, spessori e rossori vanno via.
     private static func applySkinSmoothing(_ image: CIImage,
                                            faces: [FaceData],
                                            amount: Double) -> CIImage {
@@ -418,27 +490,116 @@ enum FaceRenderer {
         let mask = skinMask(for: faces, size: size,
                             feather: max(8, size.width * 0.008))
         let faceScale = faces.map { $0.faceWidth }.max() ?? size.width * 0.4
-        let radius = max(3, faceScale * (0.012 + 0.030 * CGFloat(amount)))
-        let low = image.blurred(radius: radius)
+        let radius = max(3, faceScale * (0.008 + 0.024 * CGFloat(amount)))
+        let low = image.blurred(radius: Double(radius))
 
-        let difference = CIFilter.differenceBlendMode()
-        difference.inputImage = image
-        difference.backgroundImage = low
-        let detailLayer = difference.outputImage ?? low
-        let retention = 0.85 - 0.55 * amount
-        let detail = detailLayer.applyingFilter("CIColorMatrix", parameters: [
+        // Dettaglio con segno: image - low. L'aritmetica CI avviene su
+        // valori premoltiplicati: dimezzando RGB e alpha di entrambe le
+        // sorgenti la somma resta coerente (alpha 0.5 + 0.5 = 1).
+        let halved = premultipliedHalved(image)
+        let invertedLow = premultipliedHalved(
+            low.applyingFilter("CIColorInvert", parameters: [:]))
+        let sum = blendNamed("CIAdditionCompositing", top: halved, base: invertedLow)
+
+        // Da sum ricaviamo il dettaglio con segno (2*sum - 1 = image - low)
+        // gia' scalato della ritenzione e riportato ad alpha 0.5 per la
+        // somma finale. Il tetto morbido evita aloni sui bordi forti.
+        let retention = CGFloat(0.85 - 0.60 * amount)
+        let detail = sum.applyingFilter("CIColorMatrix", parameters: [
             "inputRVector": CIVector(x: retention, y: 0, z: 0, w: 0),
             "inputGVector": CIVector(x: 0, y: retention, z: 0, w: 0),
             "inputBVector": CIVector(x: 0, y: 0, z: retention, w: 0),
-            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0.5),
+            "inputBiasVector": CIVector(x: -0.5 * retention, y: -0.5 * retention,
+                                        z: -0.5 * retention, w: 0),
+        ]).applyingFilter("CIColorClamp", parameters: [
+            "inputMinComponents": CIVector(x: -0.09, y: -0.09, z: -0.09, w: 0),
+            "inputMaxComponents": CIVector(x: 0.09, y: 0.09, z: 0.09, w: 1),
         ])
 
-        let addition = CIFilter.additionCompositing()
-        addition.inputImage = detail.cropped(to: image.extent)
-        addition.backgroundImage = low
-        let smoothed = addition.outputImage ?? low
+        // Ricomposizione: bassa frequenza + dettaglio ritenuto, poi scala 2
+        // (le due sorgenti sono premoltiplicate a meta').
+        let recombined = blendNamed("CIAdditionCompositing",
+                                    top: detail, base: premultipliedHalved(low))
+        let smoothed = recombined.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 2, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 2, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 2, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+        ]).cropped(to: image.extent)
 
-        return blend(base: image, top: smoothed.cropped(to: image.extent), mask: mask)
+        return blend(base: image, top: smoothed, mask: mask)
+    }
+
+    /// Dimezza RGB e alpha insieme (premoltiplicazione coerente): serve per
+    /// sommare due immagini con CIAdditionCompositing senza sforare alpha.
+    private static func premultipliedHalved(_ image: CIImage) -> CIImage {
+        image.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 0.5, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 0.5, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 0.5, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0.5),
+        ])
+    }
+
+    /// Luminosita' Rec. 709 replicata sui tre canali.
+    private static func luminance(of image: CIImage) -> CIImage {
+        image.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
+            "inputGVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
+            "inputBVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+        ])
+    }
+
+    /// Intersezione di maschere in scala di grigi (moltiplicazione).
+    private static func multiplyMasks(_ masks: [CIImage],
+                                      extent: CGRect) -> CIImage {
+        guard let first = masks.first else {
+            return CIImage(color: CIColor(red: 1, green: 1, blue: 1))
+                .cropped(to: extent)
+        }
+        return masks.dropFirst().reduce(first) { partial, next in
+            blendNamed("CIMultiplyCompositing", top: next, base: partial)
+        }
+    }
+
+    /// Tono pelle uniforme (stile AirBrush): alleggerisce i rossori e
+    /// uniforma il colore senza appiattire la texture (solo colore).
+    private static func applySkinTone(_ image: CIImage,
+                                      faces: [FaceData],
+                                      amount: Double) -> CIImage {
+        let size = image.extent.size
+        let mask = skinMask(for: faces, size: size,
+                            feather: max(10, size.width * 0.010))
+        let evened = image.applyingFilter("CIColorMatrix", parameters: [
+            "inputRVector": CIVector(x: 1 - 0.05 * amount, y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: 1 + 0.015 * amount, z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: 1 + 0.02 * amount, w: 0),
+            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+        ])
+        let lifted = colorAdjust(evened,
+                                 brightness: 0.028 * amount,
+                                 saturation: 1.0 - 0.12 * amount,
+                                 contrast: 1.005)
+        let top = image.blending(image: lifted, amount: CGFloat(0.85 * amount))
+        return blend(base: image, top: top, mask: mask)
+    }
+
+    /// Illumina il viso (stile AirBrush «Brighten»): schiaritura naturale
+    /// della sola pelle, con contrasto leggermente ridotto per restare morbida.
+    private static func applySkinBrighten(_ image: CIImage,
+                                          faces: [FaceData],
+                                          amount: Double) -> CIImage {
+        let size = image.extent.size
+        let mask = skinMask(for: faces, size: size,
+                            feather: max(10, size.width * 0.010))
+        let brighter = colorAdjust(image,
+                                   brightness: 0.085 * amount,
+                                   saturation: 1.0 + 0.02 * amount,
+                                   contrast: 1.0 - 0.02 * amount)
+        let top = image.blending(image: brighter, amount: CGFloat(0.9 * amount))
+        return blend(base: image, top: top, mask: mask)
     }
 
     /// Abbronzatura: moltiplicazione calda limitata alla pelle.

@@ -25,7 +25,7 @@ struct PhotoEditorScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 8) {
             imageArea
             packCarousel
             controls
@@ -164,7 +164,9 @@ struct PhotoEditorScreen: View {
             controlRow(title: "Vignetta", value: $vignette)
         }
         .padding(16)
-        .background(.ultraThinMaterial)
+        .liquidPanel()
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
     }
 
     @ViewBuilder

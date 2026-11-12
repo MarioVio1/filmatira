@@ -136,6 +136,7 @@ lut = (ROOT / "Filmatura/LUT/LUTStore.swift").read_text()
 face = (ROOT / "Filmatura/Face/FaceRenderer.swift").read_text()
 analyzer = (ROOT / "Filmatura/Face/FaceAnalyzer.swift").read_text()
 face_ui = (ROOT / "Filmatura/Face/FaceEditScreen.swift").read_text()
+theme = (ROOT / "Filmatura/Support/Theme.swift").read_text()
 for source, token, label in [
     (cam, "appState.openStudio", "CameraScreen->AppState"),
     (cam, "ShutterButton", "CameraScreen->ShutterButton"),
@@ -146,10 +147,15 @@ for source, token, label in [
     (face, "CIPinchDistortion", "pinch warp"),
     (face, "blendWithMask", "maschere blend"),
     (face, "CIWarpKernel", "kernel warp sorriso"),
-    (face, "differenceBlendMode", "separazione di frequenze"),
-    (face, "additionCompositing", "ricomposizione dettagli"),
-    (face, "colorThreshold", "denti via soglia di luminosita'"),
+    (face, "CIDifferenceBlendMode", "maschera macchie via differenza"),
+    (face, "CIAdditionCompositing", "ricomposizione dettagli"),
+    (face, "CIColorClamp", "tetti morbidi e soglie maschera"),
     (face, "CIMedianFilter", "anti-imperfezioni"),
+    (face, "applySkinTone", "tono pelle uniforme"),
+    (face, "applySkinBrighten", "illumina viso"),
+    (face, "skinBrighten", "controllo Illumina"),
+    (face, "skinTone", "controllo Tono uniforme"),
+    (face, "premultipliedHalved", "aritmetica premoltiplicata sicura"),
     (face, "skinMask", "maschera pelle"),
     (face, "applyWarp", "pipeline warp"),
     (face, "radius0", "gradiente radiale legale"),
@@ -160,9 +166,17 @@ for source, token, label in [
     (analyzer, "noseTip", "punta del naso"),
     (analyzer, "contourEdge", "punti contorno derivati"),
     (analyzer, "mouthCornerLeft", "angoli bocca"),
-    (face_ui, "FaceCategory", "categorie FaceLab"),
+    (face_ui, "FaceCategory", "categorie strumenti"),
     (face_ui, "eyeColorSection", "selettore colore occhi"),
-    (face_ui, "presetGrid", "griglia preset"),
+    (face_ui, "presetGrid", "preset sempre visibili"),
+    (face_ui, '"Leviga"', "strumento Leviga"),
+    (face_ui, '"Macchie"', "strumento Macchie"),
+    (face_ui, '"Illumina"', "strumento Illumina"),
+    (face_ui, '"Tono uniforme"', "strumento Tono uniforme"),
+    (face_ui, "toolGlass", "bottoni strumenti Liquid Glass"),
+    (face_ui, "liquidPanel", "pannello Liquid Glass"),
+    (theme, "liquidPanel", "Theme: pannello liquid"),
+    (theme, "toolGlass", "Theme: bottone strumento"),
 ]:
     if token not in source:
         errors.append(f"riferimento mancante: {label} ('{token}')")
@@ -191,7 +205,7 @@ for token in ["xcodegen generate", "upload-artifact", "generic/platform=iOS",
         errors.append(f"workflow: manca '{token}'")
 py = (ROOT / "project.yml").read_text()
 for token in ["it.filmatura.app", "NSCameraUsageDescription", "UILaunchScreen",
-              "FilmaturaTests", "16.4", "1.2.0"]:
+              "FilmaturaTests", "16.4", "1.3.0"]:
     if token not in py:
         errors.append(f"project.yml: manca '{token}'")
 

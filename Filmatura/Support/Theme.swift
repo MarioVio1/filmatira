@@ -78,4 +78,39 @@ extension View {
             .foregroundStyle(isSelected ? Color.white : Theme.text)
             .shadow(color: .black.opacity(isSelected ? 0.16 : 0.06), radius: 6, x: 0, y: 3)
     }
+
+    /// Pannello flottante «Liquid Glass»: vetro piu' leggero (thin), bordo
+    /// luminoso e angoli generosi — la scheda strumenti si stacca dal fondo.
+    func liquidPanel() -> some View {
+        self
+            .background(
+                .thinMaterial,
+                in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(.white.opacity(0.55), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
+    }
+
+    /// Bottone strumento della barra AirBrush: piastrella di vetro con
+    /// icona ed etichetta, gradiente d'accento quando selezionata.
+    func toolGlass(isSelected: Bool) -> some View {
+        self
+            .background(
+                isSelected
+                    ? AnyShapeStyle(
+                        LinearGradient(colors: [Theme.accent, Theme.accent.opacity(0.85)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing))
+                    : AnyShapeStyle(.thinMaterial),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(.white.opacity(isSelected ? 0.7 : 0.45), lineWidth: 1)
+            )
+            .foregroundStyle(isSelected ? Color.white : Theme.text)
+            .shadow(color: .black.opacity(isSelected ? 0.14 : 0.06), radius: 5, x: 0, y: 3)
+    }
 }
