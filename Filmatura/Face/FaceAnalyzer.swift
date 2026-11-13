@@ -253,7 +253,8 @@ enum FaceAnalyzer {
 
         // recognizedPoints richiede un gruppo di giunti: chiediamo tutti e
         // poi leggiamo i giunti singoli dal dizionario.
-        let points = observation.recognizedPoints(.all)
+        let points: [VNHumanBodyPoseObservation.JointName: VNRecognizedPoint] =
+            (try? observation.recognizedPoints(.all)) ?? [:]
 
         func joint(_ name: VNHumanBodyPoseObservation.JointName) -> CGPoint? {
             guard let point = points[name] else { return nil }
