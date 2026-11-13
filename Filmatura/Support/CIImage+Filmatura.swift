@@ -94,6 +94,22 @@ extension CIImage {
     }
 }
 
+/// Regolazioni manuali professionali dell'editor foto (stile Lightroom/
+/// FaceTune): tutti i valori bipolari da -1 a 1, 0 = neutro.
+struct PhotoAdjustments: Equatable {
+    var exposure: Double = 0        // luminosita'
+    var contrast: Double = 0
+    var saturation: Double = 0
+    var temperature: Double = 0     // caldo (+) / freddo (-)
+    var tint: Double = 0            // verde (-) / magenta (+)
+    var sharpness: Double = 0       // nitidezza
+
+    var isNeutral: Bool {
+        exposure == 0 && contrast == 0 && saturation == 0 &&
+        temperature == 0 && tint == 0 && sharpness == 0
+    }
+}
+
 /// Contesto e utility per l'elaborazione delle foto a piena risoluzione.
 enum ImagePipeline {
 
@@ -104,14 +120,51 @@ enum ImagePipeline {
         ])
     }()
 
-    /// Pipeline editor completo: LUT + intensita', grain, vignetta.
+    /// Applica le regolazioni manuali: esposizione/contrasto/saturazione
+    /// via CIColorControls, temperatura/tinta via CITemperatureAndTint,
+    /// nitidezza su luminanza. Ordine professionale: tono prima del grading.
+    static func applyAdjustments(_ image: CIImage,
+                                 adjustments: PhotoAdjustments) -> CIImage {
+        var result = image
+        if adjustments.exposure != 0 || adjustments.contrast != 0 ||
+            adjustments.saturation != 0 {
+            let filter = CIFilter.colorControls()
+            filter.inputImage = result
+            filter.brightness = Float(0.16 * adjustments.exposure)
+            filter.contrast = Float(1.0 + 0.34 * adjustments.contrast)
+            filter.saturation = Float(max(0, 1.0 + 0.55 * adjustments.saturation))
+            result = filter.outputImage ?? result
+        }
+        if adjustments.temperature != 0 || adjustments.tint != 0 {
+            let filter = CIFilter.temperatureAndTint()
+            filter.inputImage = result
+            filter.neutral = CIVector(x: 6500, y: 0)
+            filter.targetNeutral = CIVector(
+                x: Float(6500 + 2400 * adjustments.temperature),
+                y: Float(90 * adjustments.tint))
+            result = filter.outputImage ?? result
+        }
+        if adjustments.sharpness != 0 {
+            let filter = CIFilter.sharpenLuminance()
+            filter.inputImage = result.clampedToExtent()
+            filter.sharpness = Float(0.9 * adjustments.sharpness)
+            filter.radius = Float(2.0)
+            result = (filter.outputImage ?? result).cropped(to: image.extent)
+        }
+        return result
+    }
+
+    /// Pipeline editor completo: regolazioni manuali, LUT + intensita',
+    /// grain, vignetta.
     static func process(image: CIImage,
                         preset: LUTPreset?,
                         intensity: Double,
                         grain: Double,
                         vignette: Double,
+                        adjustments: PhotoAdjustments = PhotoAdjustments(),
                         store: LUTStore = .shared) -> CIImage {
-        var result = store.apply(preset, intensity: intensity, to: image)
+        var result = applyAdjustments(image, adjustments: adjustments)
+        result = store.apply(preset, intensity: intensity, to: result)
         result = result.addingGrain(amount: grain)
         result = result.addingVignette(amount: vignette)
         return result

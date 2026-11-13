@@ -11,7 +11,9 @@ struct FaceEditScreen: View {
     @EnvironmentObject private var studio: MediaStore
     @State private var sourceImage: UIImage?
     @State private var faces: [FaceData] = []
+    @State private var bodyData: BodyData?
     @State private var controls = FaceEditControls()
+    @State private var bodyControls = BodyEditControls()
     @State private var category: FaceCategory = .pelle
     @State private var preview: UIImage?
     @State private var isDetecting = false
@@ -69,6 +71,7 @@ struct FaceEditScreen: View {
         case occhi = "Occhi"
         case sorriso = "Sorriso"
         case viso = "Viso"
+        case corpo = "Corpo"
         case trucco = "Trucco"
         case luce = "Luce"
         case sfondo = "Sfondo"
@@ -82,6 +85,7 @@ struct FaceEditScreen: View {
             case .occhi: return "eye"
             case .sorriso: return "face.smiling"
             case .viso: return "face.dashed"
+            case .corpo: return "figure.stand"
             case .trucco: return "lipstick"
             case .luce: return "lightbulb"
             case .sfondo: return "photo.on.rectangle.angled"
@@ -314,6 +318,8 @@ struct FaceEditScreen: View {
                 sliderRow("Mento", $controls.chin)
                 sliderRow("Naso", $controls.nose)
             }
+        case .corpo:
+            bodyContent
         case .trucco:
             makeupSection
         case .luce:
@@ -327,6 +333,38 @@ struct FaceEditScreen: View {
             }
         case .look:
             eraChips
+        }
+    }
+
+    // MARK: - Corpo (reshape stile FaceLab/FaceTune)
+
+    @ViewBuilder
+    private var bodyContent: some View {
+        VStack(spacing: 12) {
+            if let bodyData, bodyData.hasFullBody {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(Theme.accent)
+                    Text("Corpo rilevato: strumenti guidati dall'anatomia")
+                        .font(Theme.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(Theme.textSecondary)
+                    Text("Per il reshape del corpo usa una foto di corpo intero o 3/4.")
+                        .font(Theme.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                }
+            }
+            sliderRow("Vita", $bodyControls.waist)
+            sliderRow("Corpo", $bodyControls.slimBody)
+            sliderRow("Gambe", $bodyControls.legsLength)
+            sliderRow("Braccia", $bodyControls.armsSlim)
+            sliderRow("Spalle larghe", $bodyControls.shouldersWiden)
         }
     }
 
@@ -570,6 +608,7 @@ struct FaceEditScreen: View {
     private var resetRow: some View {
         Button("Ripristina") {
             withAnimation { controls = FaceEditControls() }
+            bodyControls = BodyEditControls()
             healPoints.removeAll()
             healMode = false
             scheduleRender()
@@ -593,8 +632,11 @@ struct FaceEditScreen: View {
             }
             sourceImage = loaded
             preview = loaded
-            let detected = await detect(in: loaded)
+            async let detectedFaces = detect(in: loaded)
+            let detectedBody = await detectBody(loaded)
+            let detected = await detectedFaces
             faces = detected
+            bodyData = detectedBody
             isDetecting = false
             if detected.isEmpty {
                 saveResult = "Nessun volto rilevato in questa foto."
@@ -607,6 +649,14 @@ struct FaceEditScreen: View {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 continuation.resume(returning: FaceAnalyzer.detectFaces(in: image))
+            }
+        }
+    }
+
+    private func detectBody(_ image: UIImage) async -> BodyData? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: FaceAnalyzer.detectBody(in: image))
             }
         }
     }
@@ -632,11 +682,14 @@ struct FaceEditScreen: View {
         let snapshot = controls
         let snapshotFaces = faces
         let snapshotHeal = healPoints
+        let snapshotBody = bodyData
+        let snapshotBodyControls = bodyControls
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInteractive).async {
                 let processed = FaceRenderer.render(
                     image: ci, faces: snapshotFaces, controls: snapshot,
-                    healPoints: snapshotHeal)
+                    healPoints: snapshotHeal,
+                    body: snapshotBody, bodyControls: snapshotBodyControls)
                 continuation.resume(returning: processed.rendered(maxDimension: 1400))
             }
         }
@@ -652,11 +705,15 @@ struct FaceEditScreen: View {
         let snapshot = controls
         let snapshotFaces = faces
         let snapshotHeal = healPoints
+        let snapshotBody = bodyData
+        let snapshotBodyControls = bodyControls
 
         DispatchQueue.global(qos: .userInitiated).async {
             let processed = FaceRenderer.render(image: ci, faces: snapshotFaces,
                                                 controls: snapshot,
-                                                healPoints: snapshotHeal)
+                                                healPoints: snapshotHeal,
+                                                body: snapshotBody,
+                                                bodyControls: snapshotBodyControls)
             let full = processed.rendered(maxDimension: 4096)
             DispatchQueue.main.async {
                 isProcessing = false

@@ -271,6 +271,22 @@ enum EraLook: String, CaseIterable, Identifiable {
     }
 }
 
+/// Strumenti di reshape del corpo stile FaceLab/FaceTune, guidati dalle
+/// articolazioni rilevate con VNDetectHumanBodyPoseRequest: il warp segue
+/// l'anatomia reale (asse del torso, quota spalle/fianchi/caviglie).
+struct BodyEditControls: Equatable {
+    var waist: Double = 0          // vita snella (squeeze sulla fascia vita)
+    var slimBody: Double = 0       // corpo snello (fascia larga torso+fianchi)
+    var legsLength: Double = 0     // gambe piu' lunghe (compressione torso + allungamento gambe)
+    var armsSlim: Double = 0       // braccia snelle (pinch lungo il segmento braccio)
+    var shouldersWiden: Double = 0 // spalle larghe (push-out alla linea spalle)
+
+    var isNeutral: Bool {
+        waist == 0 && slimBody == 0 && legsLength == 0 &&
+        armsSlim == 0 && shouldersWiden == 0
+    }
+}
+
 /// Renderer di ritocco pelle stile AirBrush: macchie rimosse in modo
 /// mirato (mediana + soglia), levigatura a separazione di frequenze a
 /// segno corretto, tono uniforme e luce viso, trucco e denti con maschere
@@ -294,12 +310,67 @@ enum FaceRenderer {
         """
     private static let smileWarpKernel: CIWarpKernel? = CIWarpKernel(source: smileKernelSource)
 
+    /// Warp radiale professionale (FaceLab): dislocamento gaussiano senza
+    /// il bordo circolare di CIPinchDistortion/CIBumpDistortion. La coda
+    /// gaussiana sfuma il warp sul contesto, quindi nessun «cerchio»
+    /// visibile nemmeno a intensita' alte. strength > 0 spinge fuori
+    /// (ingrandisce), strength < 0 tira verso il centro (snellisce).
+    private static let radialKernelSource = """
+        kernel vec2 filmaturaRadial(sampler src, vec2 center,
+                                    float radius, float strength) {
+            vec2 p = destCoord();
+            vec2 d = p - center;
+            float r2 = max(radius * radius, 1.0);
+            float f = exp(-(d.x * d.x + d.y * d.y) / r2);
+            return samplerCoord(src) - d * strength * f;
+        }
+        """
+    private static let radialWarpKernel: CIWarpKernel? = CIWarpKernel(source: radialKernelSource)
+
+    /// Squeeze orizzontale verso l'asse del corpo su una fascia verticale
+    /// gaussiana: amount > 0 = push-out (spalle larghe), amount < 0 =
+    /// pull-in verso l'asse (vita e corpo snelli).
+    private static let bandKernelSource = """
+        kernel vec2 filmaturaBand(sampler src, float axisX, float midY,
+                                  float sigmaY, float amount) {
+            vec2 p = destCoord();
+            float dy = p.y - midY;
+            float f = exp(-(dy * dy) / max(sigmaY * sigmaY, 1.0));
+            return samplerCoord(src) - vec2((p.x - axisX) * amount * f, 0.0);
+        }
+        """
+    private static let bandWarpKernel: CIWarpKernel? = CIWarpKernel(source: bandKernelSource)
+
+    /// Allungamento gambe anatomica (spazio CoreImage, origine in basso:
+    /// neckY > hipsY > feetY): comprime il torso di «delta» pixel e
+    /// allunga le gambe dello stesso delta. Testa e piedi restano fermi
+    /// e le giunzioni sono continue (C0 su tutte le quote).
+    private static let legsKernelSource = """
+        kernel vec2 filmaturaLegs(sampler src, float neckY, float hipsY,
+                                  float feetY, float delta) {
+            vec2 p = destCoord();
+            float y = p.y;
+            float sy = y;
+            if (y <= neckY && y > hipsY + delta) {
+                float span0 = max(neckY - hipsY, 1.0);
+                sy = hipsY + (y - hipsY - delta) * (span0 / max(span0 - delta, 1.0));
+            } else if (y <= hipsY + delta && y > feetY) {
+                float span1 = max(hipsY - feetY, 1.0);
+                sy = feetY + (y - feetY) * (span1 / max(span1 + delta, 1.0));
+            }
+            return samplerCoord(src) + vec2(0.0, sy - y);
+        }
+        """
+    private static let legsWarpKernel: CIWarpKernel? = CIWarpKernel(source: legsKernelSource)
+
     // MARK: - Pipeline principale
 
     static func render(image: CIImage,
                        faces: [FaceData],
                        controls: FaceEditControls,
                        healPoints: [CGPoint] = [],
+                       body: BodyData? = nil,
+                       bodyControls: BodyEditControls = BodyEditControls(),
                        store: LUTStore = .shared) -> CIImage {
         var result = image
         let selected = faces.filter {
@@ -392,18 +463,24 @@ enum FaceRenderer {
                                         amount: controls.portraitLight)
         }
 
-        // 6. Warp geometrico guidato dal contorno reale (punti convertiti
-        //    nello spazio CoreImage: origine in basso a sinistra).
+        // 6. Reshape del corpo guidato dalle articolazioni (vita, gambe,
+        //    braccia, spalle) con warp gaussiano professionale.
+        if !bodyControls.isNeutral {
+            result = applyBody(result, body: body, controls: bodyControls)
+        }
+
+        // 7. Warp geometrico del volto guidato dal contorno reale (punti
+        //    convertiti nello spazio CoreImage: origine in basso a sinistra).
         result = applyWarp(result, faces: selected, controls: controls)
 
-        // 7. Sfondo ritratto: sfocatura e bianco e nero fuori dalla persona.
+        // 8. Sfondo ritratto: sfocatura e bianco e nero fuori dalla persona.
         if controls.backgroundBlur > 0 || controls.backgroundMono > 0 {
             result = applyBackground(result, faces: selected,
                                      blur: controls.backgroundBlur,
                                      mono: controls.backgroundMono)
         }
 
-        // 8. Look epoca (LUT della libreria + grain).
+        // 9. Look epoca (LUT della libreria + grain).
         if let presetID = controls.eraLook.presetID {
             let preset = LUTCatalog.preset(withID: presetID)
             let intensity: Double = controls.eraLook == .seventies ? 0.6 : 0.5
@@ -696,6 +773,131 @@ enum FaceRenderer {
     // MARK: - Warp (tutti i punti sono in spazio alto-sinistra e vengono
     // convertiti nello spazio CoreImage dei filtri di distorsione)
 
+    /// Reshape del corpo stile FaceLab/FaceTune. Ogni strumento segue le
+    /// articolazioni reali: fascia vita sul torso, allungamento gambe con
+    /// compensazione del torso, pinch lungo i segmenti del braccio,
+    /// push-out alla linea spalle. Se le articolazioni richieste mancano
+    /// (ritratto ravvicinato) lo strumento resta un no-op sicuro.
+    private static func applyBody(_ image: CIImage,
+                                  body: BodyData?,
+                                  controls: BodyEditControls) -> CIImage {
+        guard let body else { return image }
+        var result = image
+
+        let neckY = body.neckY
+        let shouldersY = body.shouldersY
+        let hipsY = body.hipsY
+        let feetY = body.anklesY
+        let shoulderSpan = body.shoulderSpan
+
+        // Vita snella: fascia gaussiana centrata tra spalle e fianchi
+        // (60% verso i fianchi), squeeze verso l'asse reale del torso
+        // (amount negativo = pull-in).
+        if controls.waist > 0, let shouldersY, let hipsY {
+            let midY = shouldersY + (hipsY - shouldersY) * 0.62
+            let sigma = max((hipsY - shouldersY) * 0.30, 8)
+            if let axisX = body.torsoAxisX(atY: midY) {
+                result = bandWarp(result, axisX: axisX, midY: midY,
+                                  sigmaY: sigma,
+                                  amount: CGFloat(-0.38 * controls.waist))
+            }
+        }
+
+        // Corpo snello: fascia larga dall'incollatura fino sotto i fianchi.
+        if controls.slimBody > 0, let shouldersY, let hipsY {
+            let midY = shouldersY + (hipsY - shouldersY) * 0.70
+            let sigma = max((hipsY - shouldersY) * 0.55, 10)
+            if let axisX = body.torsoAxisX(atY: midY) {
+                result = bandWarp(result, axisX: axisX, midY: midY,
+                                  sigmaY: sigma,
+                                  amount: CGFloat(-0.26 * controls.slimBody))
+            }
+        }
+
+        // Gambe piu' lunghe: il torso si comprime di delta e le gambe si
+        // allungano dello stesso delta (testa e piedi fermi). Il delta resta
+        // limitato a un terzo del torso per non deformare l'anatomia.
+        if controls.legsLength > 0,
+           let neckY, let hipsY, let feetY,
+           hipsY > neckY + 20, feetY > hipsY + 20 {
+            let legsSpan = feetY - hipsY
+            let torsoSpan = hipsY - neckY
+            let delta = min(legsSpan * CGFloat(0.14 * controls.legsLength),
+                            torsoSpan * 0.30)
+            result = legsWarp(result, neckY: neckY, hipsY: hipsY,
+                              feetY: feetY, delta: delta)
+        }
+
+        // Braccia snelle: pinch gaussiano al centro di ogni segmento
+        // spalla-gomito e gomito-polso (se rilevato).
+        if controls.armsSlim > 0, body.hasArms {
+            for (shoulder, elbow, wrist) in body.armSegments {
+                let radius = distance(shoulder, elbow) * 0.60
+                result = gaussianWarp(result, at: midPoint(shoulder, elbow),
+                                      radius: radius,
+                                      strength: CGFloat(-0.30 * controls.armsSlim))
+                if let wrist {
+                    let forearmRadius = distance(elbow, wrist) * 0.55
+                    result = gaussianWarp(result, at: midPoint(elbow, wrist),
+                                          radius: forearmRadius,
+                                          strength: CGFloat(-0.24 * controls.armsSlim))
+                }
+            }
+        }
+
+        // Spalle larghe: push-out orizzontale alla linea delle spalle
+        // (amount positivo = push-out).
+        if controls.shouldersWiden > 0, let shouldersY, let shoulderSpan {
+            if let axisX = body.torsoAxisX(atY: shouldersY) {
+                result = bandWarp(result, axisX: axisX, midY: shouldersY,
+                                  sigmaY: max(shoulderSpan * 0.22, 8),
+                                  amount: CGFloat(0.16 * controls.shouldersWiden))
+            }
+        }
+
+        return result
+    }
+
+    private static func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        hypot(a.x - b.x, a.y - b.y)
+    }
+
+    private static func midPoint(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
+        CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+    }
+
+    private static func bandWarp(_ image: CIImage,
+                                 axisX: CGFloat,
+                                 midY: CGFloat,
+                                 sigmaY: CGFloat,
+                                 amount: CGFloat) -> CIImage {
+        guard let kernel = bandWarpKernel else { return image }
+        let ciY = image.extent.height - midY
+        let warped = kernel.apply(extent: image.extent,
+                                  roiCallback: { _, _ in image.extent },
+                                  arguments: [NSNumber(value: Float(axisX)),
+                                              NSNumber(value: Float(ciY)),
+                                              NSNumber(value: Float(sigmaY)),
+                                              NSNumber(value: Float(amount))])
+        return warped?.cropped(to: image.extent) ?? image
+    }
+
+    private static func legsWarp(_ image: CIImage,
+                                 neckY: CGFloat,
+                                 hipsY: CGFloat,
+                                 feetY: CGFloat,
+                                 delta: CGFloat) -> CIImage {
+        guard let kernel = legsWarpKernel, delta > 0.5 else { return image }
+        let height = image.extent.height
+        let warped = kernel.apply(extent: image.extent,
+                                  roiCallback: { _, _ in image.extent },
+                                  arguments: [NSNumber(value: Float(height - neckY)),
+                                              NSNumber(value: Float(height - hipsY)),
+                                              NSNumber(value: Float(height - feetY)),
+                                              NSNumber(value: Float(delta))])
+        return warped?.cropped(to: image.extent) ?? image
+    }
+
     private static func applyWarp(_ image: CIImage,
                                   faces: [FaceData],
                                   controls: FaceEditControls) -> CIImage {
@@ -789,11 +991,17 @@ enum FaceRenderer {
         return result
     }
 
+    /// Pinch (snellisce): pull-in gaussiano verso il centro, senza bordo
+    /// circolare. Fallback su CIPinchDistortion se il kernel non e' compilato.
     private static func pinch(_ image: CIImage,
                               at point: CGPoint,
                               radius: CGFloat,
                               scale: CGFloat) -> CIImage {
         guard scale > 0.01, radius > 2 else { return image }
+        if let warped = gaussianWarp(image, at: point, radius: radius,
+                                     strength: -scale) {
+            return warped
+        }
         let filter = CIFilter(name: "CIPinchDistortion")
         filter?.setValue(image, forKey: kCIInputImageKey)
         filter?.setValue(CIVector(x: point.x, y: image.extent.height - point.y),
@@ -803,11 +1011,16 @@ enum FaceRenderer {
         return filter?.outputImage?.cropped(to: image.extent) ?? image
     }
 
+    /// Bump (ingrandisce): push-out gaussiano dal centro.
     private static func bump(_ image: CIImage,
                              at point: CGPoint,
                              radius: CGFloat,
                              scale: CGFloat) -> CIImage {
         guard scale > 0.01, radius > 2 else { return image }
+        if let warped = gaussianWarp(image, at: point, radius: radius,
+                                     strength: scale) {
+            return warped
+        }
         let filter = CIFilter(name: "CIBumpDistortion")
         filter?.setValue(image, forKey: kCIInputImageKey)
         filter?.setValue(CIVector(x: point.x, y: image.extent.height - point.y),
@@ -815,6 +1028,24 @@ enum FaceRenderer {
         filter?.setValue(radius, forKey: kCIInputRadiusKey)
         filter?.setValue(scale, forKey: kCIInputScaleKey)
         return filter?.outputImage?.cropped(to: image.extent) ?? image
+    }
+
+    /// Warp radiale gaussiano. I punti passati sono in spazio alto-sinistra;
+    /// il kernel vive nello spazio CoreImage (origine basso-sinistra).
+    /// strength > 0 = push-out (ingrandisce), < 0 = pull-in (snellisce).
+    private static func gaussianWarp(_ image: CIImage,
+                                     at point: CGPoint,
+                                     radius: CGFloat,
+                                     strength: CGFloat) -> CIImage? {
+        guard let kernel = radialWarpKernel else { return nil }
+        let center = CIVector(x: point.x,
+                              y: image.extent.height - point.y)
+        let warped = kernel.apply(extent: image.extent,
+                                  roiCallback: { _, _ in image.extent },
+                                  arguments: [center,
+                                              NSNumber(value: Float(radius)),
+                                              NSNumber(value: Float(strength))])
+        return warped?.cropped(to: image.extent)
     }
 
     // MARK: - Sfondo

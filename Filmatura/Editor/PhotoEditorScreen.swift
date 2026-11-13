@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// Editor foto: pack cinematografici, intensita', grain, vignetta,
-/// confronto prima/dopo e salvataggio.
+/// Editor foto professionale: pack cinematografici con intensita',
+/// regolazioni manuali (esposizione, contrasto, saturazione, temperatura,
+/// tinta, nitidezza), grain e vignetta, confronto prima/dopo e salvataggio.
 struct PhotoEditorScreen: View {
 
     let image: UIImage
@@ -10,10 +11,19 @@ struct PhotoEditorScreen: View {
     @EnvironmentObject private var studio: MediaStore
     @Environment(\.dismiss) private var dismiss
 
+    private enum EditorTab: String, CaseIterable, Identifiable {
+        case filtri = "Filtri"
+        case regolazioni = "Regolazioni"
+        case effetti = "Effetti"
+        var id: String { rawValue }
+    }
+
     @State private var preset: LUTPreset?
     @State private var intensity: Double = 1.0
     @State private var grain: Double = 0
     @State private var vignette: Double = 0
+    @State private var adjustments = PhotoAdjustments()
+    @State private var tab: EditorTab = .filtri
     @State private var preview: UIImage?
     @State private var isProcessing = false
     @State private var showingOriginal = false
@@ -49,6 +59,7 @@ struct PhotoEditorScreen: View {
         .onChange(of: intensity) { _ in scheduleRender() }
         .onChange(of: grain) { _ in scheduleRender() }
         .onChange(of: vignette) { _ in scheduleRender() }
+        .onChange(of: adjustments) { _ in scheduleRender() }
         .alert("Salvataggio", isPresented: .constant(saveResult != nil)) {
             Button("OK", role: .cancel) { saveResult = nil }
         } message: {
@@ -158,10 +169,40 @@ struct PhotoEditorScreen: View {
 
     private var controls: some View {
         VStack(spacing: 14) {
-            controlRow(title: "Intensità", value: $intensity,
-                       hint: preset == nil ? "Scegli un preset" : nil)
-            controlRow(title: "Grain", value: $grain)
-            controlRow(title: "Vignetta", value: $vignette)
+            // Schede stile FaceTune: Filtri / Regolazioni / Effetti.
+            Picker("Sezione", selection: $tab) {
+                ForEach(EditorTab.allCases) { item in
+                    Text(item.rawValue).tag(item)
+                }
+            }
+            .pickerStyle(.segmented)
+            .tint(Theme.accent)
+
+            switch tab {
+            case .filtri:
+                controlRow(title: "Intensità", value: $intensity,
+                           hint: preset == nil ? "Scegli un preset" : nil)
+            case .regolazioni:
+                bipolarRow(title: "Esposizione", value: $adjustments.exposure)
+                bipolarRow(title: "Contrasto", value: $adjustments.contrast)
+                bipolarRow(title: "Saturazione", value: $adjustments.saturation)
+                bipolarRow(title: "Temperatura", value: $adjustments.temperature)
+                bipolarRow(title: "Tinta", value: $adjustments.tint)
+                bipolarRow(title: "Nitidezza", value: $adjustments.sharpness)
+                if !adjustments.isNeutral {
+                    Button("Azzera regolazioni") {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            adjustments = PhotoAdjustments()
+                        }
+                    }
+                    .font(Theme.caption)
+                    .foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            case .effetti:
+                controlRow(title: "Grain", value: $grain)
+                controlRow(title: "Vignetta", value: $vignette)
+            }
         }
         .padding(16)
         .liquidPanel()
@@ -193,6 +234,26 @@ struct PhotoEditorScreen: View {
         }
     }
 
+    /// Slider bipolare (-100...100) per le regolazioni manuali.
+    @ViewBuilder
+    private func bipolarRow(title: String, value: Binding<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(Theme.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Text(value.wrappedValue == 0 ? "0"
+                        : String(format: "%+d", Int(value.wrappedValue * 100)))
+                    .font(Theme.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(value.wrappedValue != 0 ? Theme.accent : Theme.text)
+            }
+            Slider(value: value, in: -1...1)
+                .tint(Theme.accent)
+        }
+    }
+
     // MARK: - Render ed export
 
     private func scheduleRender() {
@@ -210,12 +271,13 @@ struct PhotoEditorScreen: View {
     }
 
     private func renderPreview() async -> UIImage? {
-        guard let cgImage = image.cgImage else { return nil }
+        guard let cgImage = image.normalizedCGImage() else { return nil }
         let ciImage = CIImage(cgImage: cgImage)
         let snapshotPreset = preset
         let snapshotIntensity = intensity
         let snapshotGrain = grain
         let snapshotVignette = vignette
+        let snapshotAdjustments = adjustments
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInteractive).async {
                 let processed = ImagePipeline.process(
@@ -223,7 +285,8 @@ struct PhotoEditorScreen: View {
                     preset: snapshotPreset,
                     intensity: snapshotIntensity,
                     grain: snapshotGrain,
-                    vignette: snapshotVignette)
+                    vignette: snapshotVignette,
+                    adjustments: snapshotAdjustments)
                 continuation.resume(returning: processed.rendered(maxDimension: 1600))
             }
         }
@@ -231,7 +294,7 @@ struct PhotoEditorScreen: View {
 
     private func export() {
         isProcessing = true
-        guard let cgImage = image.cgImage else {
+        guard let cgImage = image.normalizedCGImage() else {
             isProcessing = false
             return
         }
@@ -240,6 +303,7 @@ struct PhotoEditorScreen: View {
         let snapshotIntensity = intensity
         let snapshotGrain = grain
         let snapshotVignette = vignette
+        let snapshotAdjustments = adjustments
 
         DispatchQueue.global(qos: .userInitiated).async {
             let processed = ImagePipeline.process(
@@ -247,7 +311,8 @@ struct PhotoEditorScreen: View {
                 preset: snapshotPreset,
                 intensity: snapshotIntensity,
                 grain: snapshotGrain,
-                vignette: snapshotVignette)
+                vignette: snapshotVignette,
+                adjustments: snapshotAdjustments)
             let full = processed.rendered(maxDimension: 4096)
             let item = studio.saveImage(full, presetName: snapshotPreset?.name)
             DispatchQueue.main.async {

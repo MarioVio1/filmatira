@@ -138,6 +138,8 @@ analyzer = (ROOT / "Filmatura/Face/FaceAnalyzer.swift").read_text()
 face_ui = (ROOT / "Filmatura/Face/FaceEditScreen.swift").read_text()
 theme = (ROOT / "Filmatura/Support/Theme.swift").read_text()
 studio = (ROOT / "Filmatura/Studio/StudioScreen.swift").read_text()
+editor = (ROOT / "Filmatura/Editor/PhotoEditorScreen.swift").read_text()
+support = (ROOT / "Filmatura/Support/CIImage+Filmatura.swift").read_text()
 for source, token, label in [
     (cam, "appState.openStudio", "CameraScreen->AppState"),
     (cam, "ShutterButton", "CameraScreen->ShutterButton"),
@@ -161,6 +163,15 @@ for source, token, label in [
     (face, "skinMask", "maschera pelle"),
     (face, "applyWarp", "pipeline warp"),
     (face, "radius0", "gradiente radiale legale"),
+    (face, "BodyEditControls", "controlli corpo (FaceLab/FaceTune)"),
+    (face, "applyBody", "reshape corpo nel render"),
+    (face, "filmaturaRadial", "kernel radiale gaussiano"),
+    (face, "filmaturaBand", "kernel fascia vita/spalle"),
+    (face, "filmaturaLegs", "kernel allungamento gambe"),
+    (face, "filmaturaSmile", "kernel sorriso"),
+    (face, "gaussianWarp", "warp gaussiano unificato"),
+    (face, "legsWarp", "warp gambe"),
+    (face, "bandWarp", "warp fascia"),
     (face, "EyeColorShade", "colore occhi"),
     (face, "CIMultiplyBlendMode", "blend trucco moltiplicato"),
     (analyzer, "VNGeneratePersonSegmentationRequest", "segmentazione persona"),
@@ -168,6 +179,11 @@ for source, token, label in [
     (analyzer, "noseTip", "punta del naso"),
     (analyzer, "contourEdge", "punti contorno derivati"),
     (analyzer, "mouthCornerLeft", "angoli bocca"),
+    (analyzer, "VNDetectHumanBodyPoseRequest", "pose del corpo (corpo)"),
+    (analyzer, "detectBody", "rilevamento corpo"),
+    (analyzer, "hasFullBody", "guardia corpo completo"),
+    (analyzer, "torsoAxisX", "asse del torso per il warp"),
+    (analyzer, "armSegments", "segmenti braccio"),
     (face_ui, "FaceCategory", "categorie strumenti"),
     (face_ui, "eyeColorSection", "selettore colore occhi"),
     (face_ui, "presetGrid", "preset sempre visibili"),
@@ -178,6 +194,14 @@ for source, token, label in [
     (face_ui, "healPoints", "tocchi di rimozione salvati"),
     (face_ui, "healToggleRow", "pulsante Rimozione a tocco"),
     (face_ui, "addHealPoint", "conversione tocco -> coordinate immagine"),
+    (face_ui, "bodyContent", "sezione strumenti corpo"),
+    (face_ui, '"Vita"', "strumento Vita"),
+    (face_ui, '"Gambe"', "strumento Gambe"),
+    (face_ui, '"Braccia"', "strumento Braccia"),
+    (face_ui, '"Spalle larghe"', "strumento Spalle"),
+    (face_ui, '"Corpo"', "categoria Corpo"),
+    (face_ui, "detectBody", "body detection al caricamento"),
+    (face_ui, "BodyEditControls", "stato controlli corpo"),
     (face_ui, "toolGlass", "bottoni strumenti Liquid Glass"),
     (face_ui, "liquidPanel", "pannello Liquid Glass"),
     (theme, "liquidPanel", "Theme: pannello liquid"),
@@ -187,6 +211,17 @@ for source, token, label in [
     (cam, "thinMaterial", "Camera: piastrelle vetro barra superiore"),
     (studio, "clipShape(RoundedRectangle(cornerRadius: 16", "Studio: miniature arrotondate"),
     (studio, "Theme.accentTeal", "Studio: stato vuoto a tema"),
+    (editor, "EditorTab", "schede editor Filtri/Regolazioni/Effetti"),
+    (editor, '"Regolazioni"', "scheda regolazioni"),
+    (editor, '"Esposizione"', "regolazione esposizione"),
+    (editor, '"Temperatura"', "regolazione temperatura"),
+    (editor, '"Nitidezza"', "regolazione nitidezza"),
+    (editor, "bipolarRow", "slider bipolari pro"),
+    (editor, "normalizedCGImage", "fix orientamento EXIF editor"),
+    (support, "PhotoAdjustments", "struttura regolazioni"),
+    (support, "applyAdjustments", "pipeline regolazioni"),
+    (support, "temperatureAndTint", "temperatura/tinta"),
+    (support, "sharpenLuminance", "nitidezza"),
 ]:
     if token not in source:
         errors.append(f"riferimento mancante: {label} ('{token}')")
@@ -216,7 +251,7 @@ for token in ["xcodegen generate", "upload-artifact", "generic/platform=iOS",
         errors.append(f"workflow: manca '{token}'")
 py = (ROOT / "project.yml").read_text()
 for token in ["it.filmatura.app", "NSCameraUsageDescription", "UILaunchScreen",
-              "FilmaturaTests", "16.4", "1.4.0"]:
+              "FilmaturaTests", "16.4", "1.5.0"]:
     if token not in py:
         errors.append(f"project.yml: manca '{token}'")
 

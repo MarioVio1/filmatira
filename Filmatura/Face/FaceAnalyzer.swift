@@ -121,7 +121,99 @@ struct FaceData: Identifiable {
     var cheekSlimRightOrFallback: CGPoint { cheekSlimRight ?? fallbackCheekSlim.right }
 }
 
-/// Rilevamento volti (VNDetectFaceLandmarksRequest) e segmentazione persona
+/// Geometria del corpo rilevata con VNDetectHumanBodyPoseRequest, per il
+/// reshape professionale (vita, gambe, braccia, spalle). Le coordinate sono
+/// in pixel con origine in alto a sinistra, come FaceData.
+struct BodyData {
+
+    let leftShoulder: CGPoint?
+    let rightShoulder: CGPoint?
+    let leftHip: CGPoint?
+    let rightHip: CGPoint?
+    let leftKnee: CGPoint?
+    let rightKnee: CGPoint?
+    let leftAnkle: CGPoint?
+    let rightAnkle: CGPoint?
+    let leftElbow: CGPoint?
+    let rightElbow: CGPoint?
+    let leftWrist: CGPoint?
+    let rightWrist: CGPoint?
+    let neck: CGPoint?
+
+    /// Il reshape del corpo e' significativo solo se torso (spalle+fianchi)
+    /// e gambe (fianchi+caviglie) sono tutti rilevati: foto di corpo intero
+    /// o almeno 3/4.
+    var hasFullBody: Bool {
+        leftShoulder != nil && rightShoulder != nil &&
+        leftHip != nil && rightHip != nil &&
+        leftAnkle != nil && rightAnkle != nil
+    }
+
+    /// Braccia snellibili solo se gomiti rilevati (segmento spalla-gomito).
+    var hasArms: Bool {
+        leftElbow != nil || rightElbow != nil
+    }
+
+    /// Segmenti del braccio usable per il pinch: (spalla, gomito, polso?).
+    var armSegments: [(shoulder: CGPoint, elbow: CGPoint, wrist: CGPoint?)] {
+        var segments: [(shoulder: CGPoint, elbow: CGPoint, wrist: CGPoint?)] = []
+        if let ls = leftShoulder, let le = leftElbow {
+            segments.append((ls, le, leftWrist))
+        }
+        if let rs = rightShoulder, let re = rightElbow {
+            segments.append((rs, re, rightWrist))
+        }
+        return segments
+    }
+
+    /// Quota del collo (top-left): dal giunto Vision oppure proiezione sopra
+    /// la linea delle spalle della stessa distanza collo-spalle stimata.
+    var neckY: CGFloat? {
+        if let neck { return neck.y }
+        guard let l = leftShoulder, let r = rightShoulder else { return nil }
+        return (l.y + r.y) / 2
+    }
+
+    var shoulderLeftOrFallback: CGPoint? { leftShoulder }
+    var shoulderRightOrFallback: CGPoint? { rightShoulder }
+
+    /// Quota media delle spalle (y alto-sinistra: spalle sopra i fianchi).
+    var shouldersY: CGFloat? {
+        guard let l = leftShoulder, let r = rightShoulder else { return nil }
+        return (l.y + r.y) / 2
+    }
+
+    var hipsY: CGFloat? {
+        guard let l = leftHip, let r = rightHip else { return nil }
+        return (l.y + r.y) / 2
+    }
+
+    var anklesY: CGFloat? {
+        guard let l = leftAnkle, let r = rightAnkle else { return nil }
+        return (l.y + r.y) / 2
+    }
+
+    /// Asse verticale del torso alla quota indicata (interpolazione spalle→fianchi).
+    func torsoAxisX(atY y: CGFloat) -> CGFloat? {
+        guard let sl = leftShoulder, let sr = rightShoulder,
+              let hl = leftHip, let hr = rightHip else { return nil }
+        let shoulderMid = CGPoint(x: (sl.x + sr.x) / 2, y: (sl.y + sr.y) / 2)
+        let hipMid = CGPoint(x: (hl.x + hr.x) / 2, y: (hl.y + hr.y) / 2)
+        let span = hipMid.y - shoulderMid.y
+        guard abs(span) > 1 else { return hipMid.x }
+        let t = min(max((y - shoulderMid.y) / span, 0), 1)
+        return shoulderMid.x + (hipMid.x - shoulderMid.x) * t
+    }
+
+    /// Larghezza del torso alle spalle (distanza tra le due spalle).
+    var shoulderSpan: CGFloat? {
+        guard let l = leftShoulder, let r = rightShoulder else { return nil }
+        return abs(r.x - l.x)
+    }
+}
+
+/// Rilevamento volti (VNDetectFaceLandmarksRequest), corpo
+/// (VNDetectHumanBodyPoseRequest) e segmentazione persona
 /// (VNGeneratePersonSegmentationRequest), tutto on-device.
 enum FaceAnalyzer {
 
@@ -145,6 +237,50 @@ enum FaceAnalyzer {
     static func detectFaces(in image: UIImage) -> [FaceData] {
         guard let cg = image.normalizedCGImage() else { return [] }
         return detectFaces(in: cg)
+    }
+
+    /// Rileva le articolazioni del corpo per il modulo «Corpo».
+    /// Torna nil se nessuna persona e' rilevata.
+    static func detectBody(in cgImage: CGImage) -> BodyData? {
+        let request = VNDetectHumanBodyPoseRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        guard (try? handler.perform([request])) != nil else { return nil }
+        guard let observation = (request.results as? [VNHumanBodyPoseObservation])?
+            .max(by: { $0.confidence < $1.confidence }) else {
+            return nil
+        }
+        let size = CGSize(width: cgImage.width, height: cgImage.height)
+
+        func joint(_ name: VNHumanBodyPoseObservation.JointName) -> CGPoint? {
+            guard let point = observation.recognizedPoints([name])?[name] else {
+                return nil
+            }
+            // Vision usa origine basso-sinistra: convertiamo.
+            return CGPoint(x: point.location.x * size.width,
+                           y: (1 - point.location.y) * size.height)
+        }
+
+        let body = BodyData(
+            leftShoulder: joint(.leftShoulder),
+            rightShoulder: joint(.rightShoulder),
+            leftHip: joint(.leftHip),
+            rightHip: joint(.rightHip),
+            leftKnee: joint(.leftKnee),
+            rightKnee: joint(.rightKnee),
+            leftAnkle: joint(.leftAnkle),
+            rightAnkle: joint(.rightAnkle),
+            leftElbow: joint(.leftElbow),
+            rightElbow: joint(.rightElbow),
+            leftWrist: joint(.leftWrist),
+            rightWrist: joint(.rightWrist),
+            neck: joint(.neck))
+        return (body.leftShoulder != nil && body.leftHip != nil)
+            || (body.rightShoulder != nil && body.rightHip != nil) ? body : nil
+    }
+
+    static func detectBody(in image: UIImage) -> BodyData? {
+        guard let cg = image.normalizedCGImage() else { return nil }
+        return detectBody(in: cg)
     }
 
     // MARK: - Segmentazione persona

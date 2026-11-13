@@ -20,7 +20,9 @@ grafica completamente originali, nessun asset o brand di terzi.
     (rosso-arancio)
   - *Vintage & Pellicola*: Super 8, Argento (bleach bypass), Pastello '90
   - *Horror & Thriller*: Nebbia, Crimson, Nord
-- **Editor foto** — pack, intensità, grain pellicola, vignetta, confronto
+- **Editor foto** — pack, intensità, **regolazioni professionali**
+  (esposizione, contrasto, saturazione, temperatura, tinta e nitidezza con
+  slider bipolari -100…100), grain pellicola, vignetta, confronto
   prima/dopo, salvataggio in app e in Fotolibra.
 - **Volto (ritratti)** — ritocco pelle in stile AirBrush, tutto su
   landmark Vision: **rimozione a tocco** (tocca brufoli e macchie e spariscono,
@@ -36,6 +38,13 @@ grafica completamente originali, nessun asset o brand di terzi.
   «Dolce» (pelle morbida e colori caldi) — look epoca *Anni '70 / Anni '90*,
   **multi-volto** (tutti i volti o selezione singola), confronto premendo
   l'anteprima, export.
+- **Corpo (reshape)** — deformazione anatomica guidata dalle articolazioni
+  rilevate con Vision (VNDetectHumanBodyPoseRequest): **vita snella**,
+  **corpo snello**, **gambe più lunghe** (il torso si comprime e le gambe
+  si allungano dello stesso delta, testa e piedi fermi), **braccia snelle**
+  lungo i segmenti reali spalla-gomito-polso e **spalle larghe**. Warp a
+  kernel gaussiano scritto su misura: nessun bordo circolare nemmeno a
+  intensità alte.
 - **Studio** — galleria dei media dell'app, import da Fotolibra, player
   video, condivisione ed eliminazione.
 - **Grafica «Liquid Glass»** — palette chiara in stile Apple: superfici
