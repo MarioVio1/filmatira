@@ -140,8 +140,8 @@ enum ImagePipeline {
             filter.inputImage = result
             filter.neutral = CIVector(x: 6500, y: 0)
             filter.targetNeutral = CIVector(
-                x: Float(6500 + 2400 * adjustments.temperature),
-                y: Float(90 * adjustments.tint))
+                x: CGFloat(6500 + 2400 * adjustments.temperature),
+                y: CGFloat(90 * adjustments.tint))
             result = filter.outputImage ?? result
         }
         if adjustments.sharpness != 0 {

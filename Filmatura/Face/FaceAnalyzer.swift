@@ -251,10 +251,12 @@ enum FaceAnalyzer {
         }
         let size = CGSize(width: cgImage.width, height: cgImage.height)
 
+        // recognizedPoints richiede un gruppo di giunti: chiediamo tutti e
+        // poi leggiamo i giunti singoli dal dizionario.
+        let points = observation.recognizedPoints(.all)
+
         func joint(_ name: VNHumanBodyPoseObservation.JointName) -> CGPoint? {
-            guard let point = observation.recognizedPoints([name])?[name] else {
-                return nil
-            }
+            guard let point = points[name] else { return nil }
             // Vision usa origine basso-sinistra: convertiamo.
             return CGPoint(x: point.location.x * size.width,
                            y: (1 - point.location.y) * size.height)

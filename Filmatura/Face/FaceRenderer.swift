@@ -833,14 +833,18 @@ enum FaceRenderer {
         if controls.armsSlim > 0, body.hasArms {
             for (shoulder, elbow, wrist) in body.armSegments {
                 let radius = distance(shoulder, elbow) * 0.60
-                result = gaussianWarp(result, at: midPoint(shoulder, elbow),
-                                      radius: radius,
-                                      strength: CGFloat(-0.30 * controls.armsSlim))
+                if let warped = gaussianWarp(result, at: midPoint(shoulder, elbow),
+                                             radius: radius,
+                                             strength: CGFloat(-0.30 * controls.armsSlim)) {
+                    result = warped
+                }
                 if let wrist {
                     let forearmRadius = distance(elbow, wrist) * 0.55
-                    result = gaussianWarp(result, at: midPoint(elbow, wrist),
-                                          radius: forearmRadius,
-                                          strength: CGFloat(-0.24 * controls.armsSlim))
+                    if let warped = gaussianWarp(result, at: midPoint(elbow, wrist),
+                                                 radius: forearmRadius,
+                                                 strength: CGFloat(-0.24 * controls.armsSlim)) {
+                        result = warped
+                    }
                 }
             }
         }
