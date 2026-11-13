@@ -39,7 +39,8 @@ REQUIRED_RES = [
 ]
 
 LUTS = ["proiezione", "notturno", "canyon", "acido", "criogenesi", "marte",
-        "super8", "argento", "pastello90", "nebbia", "crimson", "nord"]
+        "super8", "argento", "pastello90", "nebbia", "crimson", "nord",
+        "aurora", "citrino", "laguna", "porpora", "grafite", "sunset"]
 
 # 1. file richiesti
 for rel in REQUIRED_SWIFT + REQUIRED_RES:
@@ -173,6 +174,13 @@ for source, token, label in [
     (face, "legsWarp", "warp gambe"),
     (face, "bandWarp", "warp fascia"),
     (face, "EyeColorShade", "colore occhi"),
+    (face, "HairColorShade", "colori capelli"),
+    (face, "hairMask", "maschera chioma"),
+    (face, "applyHairColor", "dye capelli nel render"),
+    (face, "applyHairVolume", "volume chioma nel render"),
+    (face, "MakeupLook", "look trucco istantanei"),
+    (face, "makeupLook", "stato look trucco nei controlli"),
+    (face, "CIScreenBlendMode", "blend dye capelli screen"),
     (face, "CIMultiplyBlendMode", "blend trucco moltiplicato"),
     (analyzer, "VNGeneratePersonSegmentationRequest", "segmentazione persona"),
     (analyzer, "personMask", "maschera persona in FaceData"),
@@ -200,6 +208,14 @@ for source, token, label in [
     (face_ui, '"Braccia"', "strumento Braccia"),
     (face_ui, '"Spalle larghe"', "strumento Spalle"),
     (face_ui, '"Corpo"', "categoria Corpo"),
+    (face_ui, '"Capelli"', "categoria Capelli"),
+    (face_ui, "hairSection", "sezione strumenti capelli"),
+    (face_ui, "hairColorSection", "selettore colore capelli"),
+    (face_ui, '"Volume capelli"', "strumento Volume capelli"),
+    (face_ui, '"Colore capelli"', "titolo Colore capelli"),
+    (face_ui, "makeupLooksRow", "riga look trucco istantanei"),
+    (face_ui, '"Look istantanei"', "titolo look istantanei"),
+    (face_ui, "applyMakeupLook", "applicazione look trucco"),
     (face_ui, "detectBody", "body detection al caricamento"),
     (face_ui, "BodyEditControls", "stato controlli corpo"),
     (face_ui, "toolGlass", "bottoni strumenti Liquid Glass"),
@@ -222,6 +238,8 @@ for source, token, label in [
     (support, "applyAdjustments", "pipeline regolazioni"),
     (support, "temperatureAndTint", "temperatura/tinta"),
     (support, "sharpenLuminance", "nitidezza"),
+    (support, "addingBloom", "effetto bloom (halation)"),
+    (editor, '"Bloom"', "regolazione bloom"),
 ]:
     if token not in source:
         errors.append(f"riferimento mancante: {label} ('{token}')")
@@ -241,6 +259,8 @@ catalog = (ROOT / "Filmatura/LUT/LUTPreset.swift").read_text()
 for name in LUTS:
     if f'id: "{name}"' not in catalog:
         errors.append(f"catalogo: preset '{name}' non trovato in LUTPreset.swift")
+if 'Nuove Tendenze' not in catalog:
+    errors.append("catalogo: pack 'Nuove Tendenze' non trovato in LUTPreset.swift")
 
 # 6. workflow e project.yml
 wf = (ROOT / ".github/workflows/build-ipa.yml").read_text()
@@ -251,7 +271,7 @@ for token in ["xcodegen generate", "upload-artifact", "generic/platform=iOS",
         errors.append(f"workflow: manca '{token}'")
 py = (ROOT / "project.yml").read_text()
 for token in ["it.filmatura.app", "NSCameraUsageDescription", "UILaunchScreen",
-              "FilmaturaTests", "16.4", "1.5.0"]:
+              "FilmaturaTests", "16.4", "1.6.0"]:
     if token not in py:
         errors.append(f"project.yml: manca '{token}'")
 
@@ -263,4 +283,4 @@ if errors:
 
 total_swift = sum(len((ROOT / r).read_text().splitlines()) for r in REQUIRED_SWIFT)
 print(f"QA OK — {len(REQUIRED_SWIFT)} file Swift ({total_swift} righe), "
-      f"12 LUT, assets, workflow, project.yml: tutto presente e coerente.")
+      f"{len(LUTS)} LUT, assets, workflow, project.yml: tutto presente e coerente.")

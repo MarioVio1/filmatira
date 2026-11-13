@@ -12,7 +12,7 @@ grafica completamente originali, nessun asset o brand di terzi.
   scatto foto a piena risoluzione con LUT applicato, **registrazione video
   H.264 con il grading in tempo reale** + audio, torcia, flash, flip, zoom,
   griglia dei terzi, slider intensità filtro.
-- **12 LUT in 4 pack** (file `.cube` 33×33×33 generati dal nostro motore di
+- **18 LUT in 5 pack** (file `.cube` 33×33×33 generati dal nostro motore di
   grading):
   - *Classici di Hollywood*: Proiezione (teal & orange), Notturno (noir),
     Canyon (western ambrato)
@@ -20,10 +20,13 @@ grafica completamente originali, nessun asset o brand di terzi.
     (rosso-arancio)
   - *Vintage & Pellicola*: Super 8, Argento (bleach bypass), Pastello '90
   - *Horror & Thriller*: Nebbia, Crimson, Nord
+  - *Nuove Tendenze*: Aurora (teal & orange morbido), Citrino (oro caldo),
+    Laguna (turchese fresco), Porpora (magenta notturno), Grafite (dark
+    moody), Sunset (arancio rosa)
 - **Editor foto** — pack, intensità, **regolazioni professionali**
   (esposizione, contrasto, saturazione, temperatura, tinta e nitidezza con
-  slider bipolari -100…100), grain pellicola, vignetta, confronto
-  prima/dopo, salvataggio in app e in Fotolibra.
+  slider bipolari -100…100), **bloom** (halation), grain pellicola,
+  vignetta, confronto prima/dopo, salvataggio in app e in Fotolibra.
 - **Volto (ritratti)** — ritocco pelle in stile AirBrush, tutto su
   landmark Vision: **rimozione a tocco** (tocca brufoli e macchie e spariscono,
   con annulla/azzera), **levigatura a separazione di frequenze** che leviga
@@ -32,7 +35,13 @@ grafica completamente originali, nessun asset o brand di terzi.
   grandi (warp locale), denti più bianchi, sorriso, scolpimento viso
   (viso snello, guance, pomelli, mandibola, mento, naso), luce ritratto,
   sfondo sfocato o bianco e nero, **trucco** (cipria, contouring, blush,
-  ombretto, eyeliner e rossetto con 18 sfumature), **quattro preset
+  ombretto, eyeliner e rossetto con 18 sfumature) con **8 look istantanei**
+  (Nessuno, Nude, Pesca, Corallo, Smoky, Malva, Rosso Glam, Bronze — ricette
+  complete a un tocco, modificabili poi con gli slider), **capelli**:
+  **colore** con 11 tonalità (dal Nero al Blu, con fusione dedicata per
+  toni scuri, chiari e fantasy via segmentazione persona + attaccatura
+  stimata dal contorno) e **volume della chioma** (warp gaussiano sulla
+  corona e ai lati della testa), **quattro preset
   istantanei** — «Fai bello» (ritocco completo pelle-first), «Naturale»
   (solo lucido), «Glam» (ritocco forte, occhi grandi, trucco serata) e
   «Dolce» (pelle morbida e colori caldi) — look epoca *Anni '70 / Anni '90*,
@@ -125,7 +134,7 @@ Filmatura/
 │   ├── Support/                   # tema, estensioni Core Image
 │   └── Resources/
 │       ├── Assets.xcassets        # icona, accent color, launch
-│       └── LUTs/*.cube            # 12 LUT originali 33³
+│       └── LUTs/*.cube            # 18 LUT originali 33³
 ├── Tests/                         # test unitari parser e catalogo
 ├── scripts/                       # generatori LUT/icona (Python)
 └── replica/                       # mappa funzionale e feature matrix

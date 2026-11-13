@@ -11,7 +11,7 @@ import numpy as np
 from pathlib import Path
 
 N = 33
-OUT = Path("/home/z/my-project/Filmatura/Filmatura/Resources/LUTs")
+OUT = Path("/home/z/my-project/Filmatura/Resources/LUTs")
 
 # ---------- motore di grading ----------
 
@@ -151,6 +151,37 @@ PRESETS = {
         st_sh=(0.00, 0.02, 0.05), st_hi=(0.05, 0.08, 0.11), st_strength=0.8, st_balance=0.5,
         fade=0.10, fade_col=(0.07, 0.08, 0.10), clip=-0.05,
     ),
+    # --- Pack: Nuove Tendenze ---
+    "aurora": dict(  # teal & orange morbido, moderno
+        temp=0.05, tint=0.01, contrast=0.30, sat=1.08,
+        st_sh=(0.00, 0.06, 0.09), st_hi=(0.12, 0.05, 0.00), st_strength=0.95, st_balance=0.52,
+        fade=0.05, fade_col=(0.04, 0.05, 0.07),
+    ),
+    "citrino": dict(  # oro caldo e luminoso
+        temp=0.10, tint=-0.01, contrast=0.22, sat=1.06,
+        st_sh=(0.04, 0.02, 0.00), st_hi=(0.16, 0.11, 0.02), st_strength=0.9, st_balance=0.5,
+        fade=0.08, fade_col=(0.10, 0.08, 0.04), clip=-0.04,
+    ),
+    "laguna": dict(  # turchese fresco, estivo
+        temp=-0.10, tint=0.02, contrast=0.20, sat=1.04,
+        st_sh=(0.00, 0.04, 0.07), st_hi=(0.05, 0.12, 0.13), st_strength=0.85, st_balance=0.5,
+        fade=0.08, fade_col=(0.04, 0.07, 0.09), clip=-0.04,
+    ),
+    "porpora": dict(  # viola magenta notturno
+        temp=-0.03, tint=-0.07, contrast=0.38, sat=1.14,
+        st_sh=(0.05, 0.00, 0.08), st_hi=(0.14, 0.03, 0.10), st_strength=1.15, st_balance=0.48,
+        clip=0.08,
+    ),
+    "grafite": dict(  # dark moody desaturato
+        temp=-0.04, tint=0.02, contrast=0.45, sat=0.62,
+        st_sh=(0.00, 0.02, 0.04), st_hi=(0.04, 0.05, 0.07), st_strength=0.7, st_balance=0.5,
+        clip=0.15, fade=0.06, fade_col=(0.05, 0.06, 0.08),
+    ),
+    "sunset": dict(  # arancio rosa tramonto
+        temp=0.13, tint=-0.02, contrast=0.26, sat=1.10,
+        st_sh=(0.05, 0.02, 0.03), st_hi=(0.18, 0.07, 0.05), st_strength=1.0, st_balance=0.46,
+        fade=0.09, fade_col=(0.12, 0.07, 0.09),
+    ),
 }
 
 PACKS = {
@@ -166,6 +197,12 @@ PACKS = {
     "nebbia": "Horror & Thriller",
     "crimson": "Horror & Thriller",
     "nord": "Horror & Thriller",
+    "aurora": "Nuove Tendenze",
+    "citrino": "Nuove Tendenze",
+    "laguna": "Nuove Tendenze",
+    "porpora": "Nuove Tendenze",
+    "grafite": "Nuove Tendenze",
+    "sunset": "Nuove Tendenze",
 }
 
 
@@ -231,7 +268,7 @@ def preview_strip(presets):
     strip = Image.new("RGB", (w * len(tiles), h))
     for i, t in enumerate(tiles):
         strip.paste(t, (i * w, 0))
-    strip.save("/home/z/my-project/Filmatura/scripts/lut_preview.png")
+    strip.save("/home/z/my-project/scripts/lut_preview.png")
 
 
 if __name__ == "__main__":

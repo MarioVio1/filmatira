@@ -73,6 +73,7 @@ struct FaceEditScreen: View {
         case viso = "Viso"
         case corpo = "Corpo"
         case trucco = "Trucco"
+        case capelli = "Capelli"
         case luce = "Luce"
         case sfondo = "Sfondo"
         case look = "Look"
@@ -87,6 +88,7 @@ struct FaceEditScreen: View {
             case .viso: return "face.dashed"
             case .corpo: return "figure.stand"
             case .trucco: return "lipstick"
+            case .capelli: return "paintbrush"
             case .luce: return "lightbulb"
             case .sfondo: return "photo.on.rectangle.angled"
             case .look: return "camera.filters"
@@ -322,6 +324,8 @@ struct FaceEditScreen: View {
             bodyContent
         case .trucco:
             makeupSection
+        case .capelli:
+            hairSection
         case .luce:
             VStack(spacing: 12) {
                 sliderRow("Luce ritratto", $controls.portraitLight)
@@ -522,10 +526,11 @@ struct FaceEditScreen: View {
         }
     }
 
-    // MARK: - Trucco e look epoca
+    // MARK: - Trucco, capelli e look epoca
 
     private var makeupSection: some View {
         VStack(spacing: 12) {
+            makeupLooksRow
             makeupRow("Cipria", value: $controls.foundation,
                       shades: MakeupShade.foundationShades, shade: $controls.foundationShade)
             makeupRow("Contouring", value: $controls.contour, shades: nil, shade: nil)
@@ -538,6 +543,105 @@ struct FaceEditScreen: View {
             makeupRow("Rossetto", value: $controls.lipstick,
                       shades: MakeupShade.lipstickShades, shade: $controls.lipstickShade)
             sliderRow("Labbra vive", $controls.lipVibrance)
+        }
+    }
+
+    /// Look di trucco completi: un tocco applica la ricetta professionale
+    /// (cipria + contouring + blush + ombretto + eyeliner + rossetto);
+    /// un secondo tocco sul look attivo lo rimuove.
+    private var makeupLooksRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Look istantanei")
+                .font(Theme.caption)
+                .foregroundStyle(Theme.textSecondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(MakeupLook.allCases) { look in
+                        Button(look.rawValue) {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                applyMakeupLook(look)
+                            }
+                            scheduleRender()
+                        }
+                        .chipStyle(isSelected: controls.makeupLook == look)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func applyMakeupLook(_ look: MakeupLook) {
+        if look == controls.makeupLook, look != .nessuno {
+            var fresh = controls
+            MakeupLook.nessuno.apply(to: &fresh)
+            controls = fresh
+        } else {
+            var updated = controls
+            look.apply(to: &updated)
+            controls = updated
+        }
+    }
+
+    // MARK: - Capelli (colore e volume)
+
+    @ViewBuilder
+    private var hairSection: some View {
+        if faces.isEmpty {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(Theme.textSecondary)
+                Text("Per il colore e il volume dei capelli serve un volto rilevato nella foto.")
+                    .font(Theme.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+            }
+        } else {
+            VStack(spacing: 12) {
+                hairColorSection
+                sliderRow("Volume capelli", $controls.hairVolume)
+            }
+        }
+    }
+
+    private var hairColorSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Colore capelli")
+                    .font(Theme.body)
+                    .foregroundStyle(Theme.text)
+                Spacer()
+                Text(controls.hairColorShade.rawValue)
+                    .font(Theme.caption)
+                    .foregroundStyle(controls.hairColor > 0 ? Theme.accent : Theme.textSecondary)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(HairColorShade.allCases) { shade in
+                        Button {
+                            controls.hairColorShade = shade
+                            if controls.hairColor == 0 {
+                                controls.hairColor = 0.55
+                            }
+                            scheduleRender()
+                        } label: {
+                            Circle()
+                                .fill(Color(red: shade.rgb.0, green: shade.rgb.1, blue: shade.rgb.2))
+                                .frame(width: 26, height: 26)
+                                .overlay(
+                                    Circle().strokeBorder(
+                                        controls.hairColorShade == shade ? Theme.accent : Theme.textSecondary.opacity(0.4),
+                                        lineWidth: controls.hairColorShade == shade ? 2 : 1)
+                                )
+                        }
+                        .accessibilityLabel("Colore capelli \(shade.rawValue)")
+                    }
+                    Spacer()
+                }
+            }
+            Slider(value: $controls.hairColor, in: 0...1)
+                .tint(Theme.accent)
+                .onChange(of: controls.hairColor) { _ in scheduleRender() }
         }
     }
 

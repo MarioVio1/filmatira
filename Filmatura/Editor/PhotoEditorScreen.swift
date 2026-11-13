@@ -22,6 +22,7 @@ struct PhotoEditorScreen: View {
     @State private var intensity: Double = 1.0
     @State private var grain: Double = 0
     @State private var vignette: Double = 0
+    @State private var bloom: Double = 0
     @State private var adjustments = PhotoAdjustments()
     @State private var tab: EditorTab = .filtri
     @State private var preview: UIImage?
@@ -59,6 +60,7 @@ struct PhotoEditorScreen: View {
         .onChange(of: intensity) { _ in scheduleRender() }
         .onChange(of: grain) { _ in scheduleRender() }
         .onChange(of: vignette) { _ in scheduleRender() }
+        .onChange(of: bloom) { _ in scheduleRender() }
         .onChange(of: adjustments) { _ in scheduleRender() }
         .alert("Salvataggio", isPresented: .constant(saveResult != nil)) {
             Button("OK", role: .cancel) { saveResult = nil }
@@ -200,6 +202,7 @@ struct PhotoEditorScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             case .effetti:
+                controlRow(title: "Bloom", value: $bloom)
                 controlRow(title: "Grain", value: $grain)
                 controlRow(title: "Vignetta", value: $vignette)
             }
@@ -277,6 +280,7 @@ struct PhotoEditorScreen: View {
         let snapshotIntensity = intensity
         let snapshotGrain = grain
         let snapshotVignette = vignette
+        let snapshotBloom = bloom
         let snapshotAdjustments = adjustments
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInteractive).async {
@@ -286,6 +290,7 @@ struct PhotoEditorScreen: View {
                     intensity: snapshotIntensity,
                     grain: snapshotGrain,
                     vignette: snapshotVignette,
+                    bloom: snapshotBloom,
                     adjustments: snapshotAdjustments)
                 continuation.resume(returning: processed.rendered(maxDimension: 1600))
             }
@@ -303,6 +308,7 @@ struct PhotoEditorScreen: View {
         let snapshotIntensity = intensity
         let snapshotGrain = grain
         let snapshotVignette = vignette
+        let snapshotBloom = bloom
         let snapshotAdjustments = adjustments
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -312,6 +318,7 @@ struct PhotoEditorScreen: View {
                 intensity: snapshotIntensity,
                 grain: snapshotGrain,
                 vignette: snapshotVignette,
+                bloom: snapshotBloom,
                 adjustments: snapshotAdjustments)
             let full = processed.rendered(maxDimension: 4096)
             let item = studio.saveImage(full, presetName: snapshotPreset?.name)

@@ -60,6 +60,17 @@ extension CIImage {
         return self.blending(image: softened, amount: scaledAmount)
     }
 
+    /// Bloom (halation): glow morbido sulle alte luci, effetto pellicola
+    /// anamorfica. CIBloom non ha chiavi KVC problematiche: usa i builtin.
+    func addingBloom(amount: Double) -> CIImage {
+        guard amount > 0.01 else { return self }
+        let filter = CIFilter.bloom()
+        filter.inputImage = self
+        filter.radius = Float(max(extent.width, extent.height) * 0.045)
+        filter.intensity = Float(amount * 0.9)
+        return filter.outputImage ?? self
+    }
+
     /// Vignetta cinematografica.
     func addingVignette(amount: Double) -> CIImage {
         guard amount > 0.01 else { return self }
@@ -155,16 +166,18 @@ enum ImagePipeline {
     }
 
     /// Pipeline editor completo: regolazioni manuali, LUT + intensita',
-    /// grain, vignetta.
+    /// bloom, grain, vignetta.
     static func process(image: CIImage,
                         preset: LUTPreset?,
                         intensity: Double,
                         grain: Double,
                         vignette: Double,
+                        bloom: Double = 0,
                         adjustments: PhotoAdjustments = PhotoAdjustments(),
                         store: LUTStore = .shared) -> CIImage {
         var result = applyAdjustments(image, adjustments: adjustments)
         result = store.apply(preset, intensity: intensity, to: result)
+        result = result.addingBloom(amount: bloom)
         result = result.addingGrain(amount: grain)
         result = result.addingVignette(amount: vignette)
         return result

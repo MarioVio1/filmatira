@@ -40,6 +40,14 @@ enum LUTCatalog {
             LUTPreset(id: "crimson", name: "Crimson", packID: "horror"),
             LUTPreset(id: "nord", name: "Nord", packID: "horror"),
         ]),
+        FilmPack(id: "tendenze", name: "Nuove Tendenze", presets: [
+            LUTPreset(id: "aurora", name: "Aurora", packID: "tendenze"),
+            LUTPreset(id: "citrino", name: "Citrino", packID: "tendenze"),
+            LUTPreset(id: "laguna", name: "Laguna", packID: "tendenze"),
+            LUTPreset(id: "porpora", name: "Porpora", packID: "tendenze"),
+            LUTPreset(id: "grafite", name: "Grafite", packID: "tendenze"),
+            LUTPreset(id: "sunset", name: "Sunset", packID: "tendenze"),
+        ]),
     ]
 
     static var allPresets: [LUTPreset] { packs.flatMap { $0.presets } }

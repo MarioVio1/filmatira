@@ -56,8 +56,8 @@ final class LUTParserTests: XCTestCase {
     }
 
     func testCatalogIntegrity() {
-        XCTAssertEqual(LUTCatalog.packs.count, 4)
-        XCTAssertEqual(LUTCatalog.allPresets.count, 12)
+        XCTAssertEqual(LUTCatalog.packs.count, 5)
+        XCTAssertEqual(LUTCatalog.allPresets.count, 18)
         // id unici
         let ids = LUTCatalog.allPresets.map { $0.id }
         XCTAssertEqual(Set(ids).count, ids.count)
@@ -67,6 +67,7 @@ final class LUTParserTests: XCTestCase {
         XCTAssertEqual(LUTCatalog.preset(withID: "proiezione")?.packID, "classici")
         XCTAssertEqual(LUTCatalog.pack(forPresetID: "marte")?.name, "Sci-Fi & Distopia")
         XCTAssertEqual(LUTCatalog.pack(forPresetID: "crimson")?.name, "Horror & Thriller")
+        XCTAssertEqual(LUTCatalog.pack(forPresetID: "aurora")?.name, "Nuove Tendenze")
         XCTAssertNil(LUTCatalog.preset(withID: "inesistente"))
     }
 }

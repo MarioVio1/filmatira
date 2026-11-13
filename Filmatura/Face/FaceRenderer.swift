@@ -56,6 +56,132 @@ enum MakeupShade: String, CaseIterable, Equatable, Identifiable {
     static let lipstickShades: [MakeupShade] = [.nude, .rosso, .corallo, .malva, .rosa]
 }
 
+/// Look di trucco completi (stile FaceLab): una ricetta professionale che
+/// combina cipria, contouring, blush, ombretto, eyeliner e rossetto in un
+/// solo tocco. «Nessuno» riporta la parte trucco a zero.
+enum MakeupLook: String, CaseIterable, Equatable, Identifiable {
+    case nessuno = "Nessuno"
+    case nude = "Nude"
+    case pesca = "Pesca"
+    case corallo = "Corallo"
+    case smoky = "Smoky"
+    case malva = "Malva"
+    case rossoGlam = "Rosso Glam"
+    case bronze = "Bronze"
+
+    var id: String { rawValue }
+
+    /// Applica la ricetta del look ai controlli (solo la parte trucco:
+    /// pelle, occhi e warp restano com'era, il look si puo' ritoccare dopo
+    /// con gli slider manuali).
+    func apply(to c: inout FaceEditControls) {
+        c.foundation = 0
+        c.foundationShade = .naturale
+        c.contour = 0
+        c.blush = 0
+        c.blushShade = .pesca
+        c.eyeshadow = 0
+        c.eyeshadowShade = .sabbia
+        c.eyeliner = 0
+        c.eyelinerShade = .nero
+        c.lipstick = 0
+        c.lipstickShade = .nude
+        c.lipVibrance = 0
+        c.makeupLook = self
+        switch self {
+        case .nessuno:
+            break
+        case .nude:
+            c.foundation = 0.30
+            c.contour = 0.10
+            c.blush = 0.20
+            c.blushShade = .rosa
+            c.eyeshadow = 0.18
+            c.eyeshadowShade = .sabbia
+            c.lipstick = 0.28
+            c.lipstickShade = .nude
+            c.lipVibrance = 0.12
+        case .pesca:
+            c.foundation = 0.28
+            c.foundationShade = .caldo
+            c.contour = 0.12
+            c.blush = 0.36
+            c.blushShade = .pesca
+            c.eyeshadow = 0.26
+            c.eyeshadowShade = .rame
+            c.eyeliner = 0.16
+            c.eyelinerShade = .marrone
+            c.lipstick = 0.32
+            c.lipstickShade = .corallo
+            c.lipVibrance = 0.25
+        case .corallo:
+            c.foundation = 0.28
+            c.contour = 0.10
+            c.blush = 0.34
+            c.blushShade = .corallo
+            c.eyeshadow = 0.24
+            c.eyeshadowShade = .sabbia
+            c.eyeliner = 0.14
+            c.eyelinerShade = .marrone
+            c.lipstick = 0.46
+            c.lipstickShade = .corallo
+            c.lipVibrance = 0.30
+        case .smoky:
+            c.foundation = 0.35
+            c.foundationShade = .caldo
+            c.contour = 0.24
+            c.blush = 0.20
+            c.blushShade = .malva
+            c.eyeshadow = 0.62
+            c.eyeshadowShade = .fumo
+            c.eyeliner = 0.58
+            c.eyelinerShade = .nero
+            c.lipstick = 0.30
+            c.lipstickShade = .nude
+            c.lipVibrance = 0.15
+        case .malva:
+            c.foundation = 0.30
+            c.foundationShade = .freddo
+            c.contour = 0.15
+            c.blush = 0.30
+            c.blushShade = .malva
+            c.eyeshadow = 0.52
+            c.eyeshadowShade = .viola
+            c.eyeliner = 0.32
+            c.eyelinerShade = .nero
+            c.lipstick = 0.48
+            c.lipstickShade = .malva
+            c.lipVibrance = 0.25
+        case .rossoGlam:
+            c.foundation = 0.40
+            c.foundationShade = .caldo
+            c.contour = 0.26
+            c.blush = 0.28
+            c.blushShade = .corallo
+            c.eyeshadow = 0.32
+            c.eyeshadowShade = .rame
+            c.eyeliner = 0.46
+            c.eyelinerShade = .nero
+            c.lipstick = 0.68
+            c.lipstickShade = .rosso
+            c.lipVibrance = 0.45
+        case .bronze:
+            c.foundation = 0.38
+            c.foundationShade = .abbronzzato
+            c.contour = 0.30
+            c.blush = 0.30
+            c.blushShade = .pesca
+            c.eyeshadow = 0.36
+            c.eyeshadowShade = .rame
+            c.eyeliner = 0.26
+            c.eyelinerShade = .marrone
+            c.lipstick = 0.36
+            c.lipstickShade = .nude
+            c.lipVibrance = 0.20
+        }
+    }
+}
+
 /// Tonalita' per il colore degli occhi (gradiente iride via maschera).
 enum EyeColorShade: String, CaseIterable, Equatable, Identifiable {
     case miele = "Miele"
@@ -120,7 +246,8 @@ struct FaceEditControls: Equatable {
     var backgroundBlur: Double = 0    // sfondo sfocato
     var backgroundMono: Double = 0    // sfondo bianco e nero
 
-    // Trucco
+    // Trucco (look istantanei + controllo manuale)
+    var makeupLook: MakeupLook = .nessuno
     var foundation: Double = 0
     var foundationShade: MakeupShade = .naturale
     var contour: Double = 0
@@ -134,6 +261,11 @@ struct FaceEditControls: Equatable {
     var lipstickShade: MakeupShade = .nude
     var lipVibrance: Double = 0       // labbra piu' vive
 
+    // Capelli (dye e volume sulla chioma)
+    var hairColor: Double = 0         // colore capelli
+    var hairColorShade: HairColorShade = .castano
+    var hairVolume: Double = 0        // volume della chioma
+
     var eraLook: EraLook = .none
     var targetFaceID: UUID? = nil     // nil = tutti i volti
 
@@ -145,7 +277,8 @@ struct FaceEditControls: Equatable {
         skinTone == 0 && tan == 0 && skinGlow == 0 &&
         portraitLight == 0 && backgroundBlur == 0 && backgroundMono == 0 &&
         foundation == 0 && contour == 0 && blush == 0 && eyeshadow == 0 &&
-        eyeliner == 0 && lipstick == 0 && lipVibrance == 0 && eraLook == .none
+        eyeliner == 0 && lipstick == 0 && lipVibrance == 0 &&
+        hairColor == 0 && hairVolume == 0 && eraLook == .none
     }
 
     /// Preset «Fai bello»: prima la pelle (pulita, uniforme, luminosa),
@@ -252,6 +385,57 @@ struct FaceEditControls: Equatable {
     var isNaturalePreset: Bool { self == FaceEditControls.naturalePreset() }
     var isGlamPreset: Bool { self == FaceEditControls.glamPreset() }
     var isDolcePreset: Bool { self == FaceEditControls.dolcePreset() }
+}
+
+/// Colori per la capigliatura (dye stile FaceTune Hair): ogni tono dichiara
+/// come fonde il colore sui capelli originali (scuri, chiari, vivaci), così
+/// il biondo su capelli scuri e il nero su biondi restano credibili.
+enum HairColorShade: String, CaseIterable, Equatable, Identifiable {
+    case nero = "Nero"
+    case castanoScuro = "Castano scuro"
+    case castano = "Castano"
+    case caramello = "Caramello"
+    case biondo = "Biondo"
+    case platino = "Platino"
+    case rame = "Rame"
+    case cenere = "Cenere"
+    case rosa = "Rosa"
+    case viola = "Viola"
+    case blu = "Blu"
+
+    var id: String { rawValue }
+
+    /// Come il colore si fonde sui capelli:
+    /// - scuro: moltiplicazione + sollevamento dei neri (tinta ricca);
+    /// - chiaro: soft-light + schiaritura (biondi, platino, cenere, rame);
+    /// - vivace: doppio soft-light (colori fantasy).
+    enum BlendClass {
+        case scuro, chiaro, vivace
+    }
+
+    var rgb: (Double, Double, Double) {
+        switch self {
+        case .nero: return (0.16, 0.13, 0.14)
+        case .castanoScuro: return (0.30, 0.20, 0.13)
+        case .castano: return (0.44, 0.30, 0.19)
+        case .caramello: return (0.60, 0.42, 0.26)
+        case .biondo: return (0.74, 0.62, 0.44)
+        case .platino: return (0.88, 0.86, 0.80)
+        case .rame: return (0.63, 0.33, 0.18)
+        case .cenere: return (0.58, 0.59, 0.62)
+        case .rosa: return (0.86, 0.44, 0.58)
+        case .viola: return (0.48, 0.32, 0.68)
+        case .blu: return (0.22, 0.36, 0.72)
+        }
+    }
+
+    var blendClass: BlendClass {
+        switch self {
+        case .nero, .castanoScuro, .castano, .blu: return .scuro
+        case .caramello, .biondo, .platino, .cenere, .rame: return .chiaro
+        case .rosa, .viola: return .vivace
+        }
+    }
 }
 
 /// Look epoca applicati via LUT + grain della libreria Filmatura.
@@ -478,6 +662,18 @@ enum FaceRenderer {
             result = applyBackground(result, faces: selected,
                                      blur: controls.backgroundBlur,
                                      mono: controls.backgroundMono)
+        }
+
+        // 8b. Capelli: dye e volume sulla chioma. Dopo lo sfondo, cosi' la
+        //     chioma allargata non viene trattata come sfondo dal blur.
+        if controls.hairColor > 0 {
+            result = applyHairColor(result, faces: selected,
+                                    amount: controls.hairColor,
+                                    shade: controls.hairColorShade)
+        }
+        if controls.hairVolume > 0 {
+            result = applyHairVolume(result, faces: selected,
+                                     amount: controls.hairVolume)
         }
 
         // 9. Look epoca (LUT della libreria + grain).
@@ -1083,6 +1279,138 @@ enum FaceRenderer {
             result = blend(base: result, top: top, mask: outside)
         }
 
+        return result
+    }
+
+    // MARK: - Capelli
+
+    /// Maschera della chioma: la regione sopra l'attaccatura stimata (il
+    /// punto piu' alto del contorno del volto, con la quota delle
+    /// sopracciglia come limite di sicurezza) piu' due bande laterali per
+    /// le ciocche davanti alle orecchie. La segmentazione persona esclude
+    /// lo sfondo: solo i pixel del soggetto possono ricevere il colore.
+    private static func hairMask(for faces: [FaceData],
+                                 size: CGSize,
+                                 feather: CGFloat) -> CIImage? {
+        guard !faces.isEmpty else { return nil }
+        let mask = maskImage(size: size) { context in
+            context.setFillColor(gray: 1, alpha: 1)
+            for face in faces {
+                let w = face.faceWidth
+                let h = face.faceHeight
+                let contourTopY = face.contour.map { $0.y }.min() ?? face.box.minY
+                let browTopY = min(
+                    face.leftEyebrowPolygon.map { $0.y }.min() ?? face.box.minY,
+                    face.rightEyebrowPolygon.map { $0.y }.min() ?? face.box.minY)
+                // Attaccatura: il punto piu' alto del contorno; se il
+                // contorno e' interpolato troppo in basso, la quota delle
+                // sopracciglia lo riserva (niente tinta sulla fronte).
+                let hairlineY = min(contourTopY, browTopY - h * 0.10)
+                let topY = hairlineY - h * 0.90
+                // Chioma: ellisse larga sopra e attorno alla testa.
+                context.fillEllipse(in: CGRect(x: face.box.midX - w * 1.05,
+                                               y: topY,
+                                               width: w * 2.10,
+                                               height: h * 0.95))
+                // Ciocche laterali fuori dal contorno, fino al mento.
+                let chinY = face.chinPoint.y
+                let sideHeight = max(chinY + h * 0.15 - topY, h * 0.5)
+                context.fillEllipse(in: CGRect(x: face.box.minX - w * 0.44,
+                                               y: topY,
+                                               width: w * 0.52,
+                                               height: sideHeight))
+                context.fillEllipse(in: CGRect(x: face.box.maxX - w * 0.08,
+                                               y: topY,
+                                               width: w * 0.52,
+                                               height: sideHeight))
+            }
+        }
+        if let person = faces.first?.personMask {
+            let limited = multiplyMasks([mask, person], extent: mask.extent)
+            return feathered(limited, radius: feather)
+        }
+        return feathered(mask, radius: feather)
+    }
+
+    /// Dye dei capelli (stile FaceTune Hair): la chioma viene desaturata
+    /// cosi' il nuovo colore domina, poi il tono si fonde secondo la classe
+    /// del colore (scuri = moltiplicazione con sollevamento dei neri,
+    /// chiari = soft-light con schiaritura, vivaci = doppio soft-light).
+    /// La luminanza e la micro-textura dei capelli restano visibili.
+    private static func applyHairColor(_ image: CIImage,
+                                       faces: [FaceData],
+                                       amount: Double,
+                                       shade: HairColorShade) -> CIImage {
+        let size = image.extent.size
+        guard let mask = hairMask(for: faces, size: size,
+                                  feather: max(8, size.width * 0.014)) else {
+            return image
+        }
+        let (r, g, b) = shade.rgb
+        let flat = CIImage(color: CIColor(red: r, green: g, blue: b))
+            .cropped(to: image.extent)
+        let desat = colorAdjust(image, brightness: 0,
+                                saturation: 0.25, contrast: 1.0)
+        let tinted: CIImage
+        switch shade.blendClass {
+        case .scuro:
+            let multiplied = blendNamed("CIMultiplyBlendMode", top: flat, base: desat)
+            let lift = CIImage(color: CIColor(red: r * 0.28, green: g * 0.28,
+                                              blue: b * 0.28))
+                .cropped(to: image.extent)
+            tinted = blendNamed("CIScreenBlendMode", top: lift, base: multiplied)
+        case .chiaro:
+            let soft = blendNamed("CISoftLightBlendMode", top: flat, base: desat)
+            let lift = CIImage(color: CIColor(red: r * 0.30, green: g * 0.30,
+                                              blue: b * 0.30))
+                .cropped(to: image.extent)
+            tinted = blendNamed("CIScreenBlendMode", top: lift, base: soft)
+        case .vivace:
+            let soft = blendNamed("CISoftLightBlendMode", top: flat, base: image)
+            tinted = blendNamed("CISoftLightBlendMode", top: flat, base: soft)
+        }
+        let top = image.blending(image: tinted, amount: CGFloat(0.90 * amount))
+        return blend(base: image, top: top, mask: mask)
+    }
+
+    /// Volume della capigliatura: push-out gaussiano sulla chioma (crown)
+    /// e ai lati della testa, sopra la linea delle sopracciglia. Il warp
+    /// segue la geometria del volto, quindi i tratti restano al loro posto.
+    private static func applyHairVolume(_ image: CIImage,
+                                        faces: [FaceData],
+                                        amount: Double) -> CIImage {
+        var result = image
+        for face in faces {
+            let w = face.faceWidth
+            let h = face.faceHeight
+            let contourTopY = face.contour.map { $0.y }.min() ?? face.box.minY
+            let browTopY = min(
+                face.leftEyebrowPolygon.map { $0.y }.min() ?? face.box.minY,
+                face.rightEyebrowPolygon.map { $0.y }.min() ?? face.box.minY)
+            let hairlineY = min(contourTopY, browTopY - h * 0.10)
+            if let warped = gaussianWarp(result,
+                                         at: CGPoint(x: face.box.midX,
+                                                     y: hairlineY - h * 0.35),
+                                         radius: w * 0.95,
+                                         strength: CGFloat(0.12 * amount)) {
+                result = warped
+            }
+            let sideY = hairlineY - h * 0.05
+            if let left = gaussianWarp(result,
+                                       at: CGPoint(x: face.box.minX - w * 0.05,
+                                                   y: sideY),
+                                       radius: w * 0.50,
+                                       strength: CGFloat(0.07 * amount)) {
+                result = left
+            }
+            if let right = gaussianWarp(result,
+                                        at: CGPoint(x: face.box.maxX + w * 0.05,
+                                                    y: sideY),
+                                        radius: w * 0.50,
+                                        strength: CGFloat(0.07 * amount)) {
+                result = right
+            }
+        }
         return result
     }
 
