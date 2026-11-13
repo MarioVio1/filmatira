@@ -22,16 +22,20 @@ grafica completamente originali, nessun asset o brand di terzi.
   - *Horror & Thriller*: Nebbia, Crimson, Nord
 - **Editor foto** — pack, intensità, grain pellicola, vignetta, confronto
   prima/dopo, salvataggio in app e in Fotolibra.
-- **Volto (ritratti)** — rilevamento landmark con Vision: pelle liscia,
-  **occhiaie attenuate**, occhi più luminosi, **occhi più grandi** (warp
-  locale), denti più bianchi, **glow viso**, pomelli e mandibola scolpiti
-  (warp), **viso snello**, labbra più vive, luce ritratto, sfondo sfocato,
-  **trucco** (cipria, contouring, blush, ombretto, eyeliner e rossetto con
-  sfumature selezionabili), **tre preset istantanei** — «Fai bello»
-  (ritocco completo + trucco leggero), «Naturale» (solo lucido) e «Glam»
-  (ritocco forte, occhi grandi, trucco serata) — look epoca *Anni '70 /
-  Anni '90*, **multi-volto** (tutti i volti o selezione singola), confronto,
-  export.
+- **Volto (ritratti)** — ritocco pelle in stile AirBrush, tutto su
+  landmark Vision: **rimozione a tocco** (tocca brufoli e macchie e spariscono,
+  con annulla/azzera), **levigatura a separazione di frequenze** che leviga
+  la pelle conservando pori e texture, **anti-macchie**, **tono uniforme**,
+  abbronzatura, glow viso, occhiaie attenuate, occhi più luminosi e più
+  grandi (warp locale), denti più bianchi, sorriso, scolpimento viso
+  (viso snello, guance, pomelli, mandibola, mento, naso), luce ritratto,
+  sfondo sfocato o bianco e nero, **trucco** (cipria, contouring, blush,
+  ombretto, eyeliner e rossetto con 18 sfumature), **quattro preset
+  istantanei** — «Fai bello» (ritocco completo pelle-first), «Naturale»
+  (solo lucido), «Glam» (ritocco forte, occhi grandi, trucco serata) e
+  «Dolce» (pelle morbida e colori caldi) — look epoca *Anni '70 / Anni '90*,
+  **multi-volto** (tutti i volti o selezione singola), confronto premendo
+  l'anteprima, export.
 - **Studio** — galleria dei media dell'app, import da Fotolibra, player
   video, condivisione ed eliminazione.
 - **Grafica «Liquid Glass»** — palette chiara in stile Apple: superfici
